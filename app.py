@@ -637,6 +637,113 @@ def descargar_ficha_tutoria_pdf(id):
         flash("Ocurrió un error al generar la ficha en PDF. Verifique los logs del servidor.", "error")
         return redirect(url_for("panel_tutor" if g.rol == "tutor" else "panel_alumno"))
 
+PLANTILLA_INDIVIDUAL = os.path.join(CARPETA_BASE, "Reporte_Tutoria_Individual_UTN_2.xlsx")
+
+@app.route("/descargar-ficha-tutoria-excel/<int:id>")
+@requiere_rol("tutor", "alumno")
+def descargar_ficha_tutoria_excel(id):
+    try:
+        tutoria = Tutoria.query.get_or_404(id)
+        if g.rol == "tutor" and tutoria.id_tutor != g.uid:
+            flash("No tienes permiso para ver esta tutoría", "error")
+            return redirect(url_for("panel_tutor"))
+
+        if not os.path.exists(PLANTILLA_INDIVIDUAL):
+            flash("La plantilla de reporte individual no se encuentra en el servidor", "error")
+            return redirect(url_for("panel_tutor" if g.rol == "tutor" else "panel_alumno"))
+
+        # Cargar plantilla Excel
+        wb = openpyxl.load_workbook(PLANTILLA_INDIVIDUAL)
+        ws = wb.active
+
+        # Llenar variables
+        nombre_alumno = tutoria.alumno.usuario.nombre_completo if (tutoria.alumno and tutoria.alumno.usuario) else "N/A"
+        matricula_alumno = tutoria.alumno.usuario.credencial if (tutoria.alumno and tutoria.alumno.usuario) else "N/A"
+        tutor_obj = Usuario.query.get(tutoria.id_tutor)
+        nombre_tutor = tutor_obj.nombre_completo if tutor_obj else "N/A"
+        fecha_str = tutoria.fecha.strftime("%d/%m/%Y") if tutoria.fecha else "N/A"
+
+        # Escribir en celdas específicas según formato
+        ws["C4"] = nombre_alumno
+        ws["C5"] = matricula_alumno
+        ws["C6"] = tutoria.carrera or "TIC"
+        ws["C7"] = tutoria.grupo or "N/A"
+        ws["G4"] = nombre_tutor
+        ws["G5"] = fecha_str
+        ws["G6"] = f"{tutoria.hr_inicio or ''} - {tutoria.hr_salida or ''}"
+        ws["C10"] = tutoria.motivo or tutoria.tema or "N/A"
+        ws["C14"] = tutoria.puntos_relevantes or "N/A"
+        ws["C18"] = tutoria.compromisos or "N/A"
+        ws["C22"] = tutoria.observaciones or "N/A"
+
+        # Guardar en memoria y enviar
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+
+        return send_file(
+            buffer,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=f"Ficha_Tutoria_{tutoria.id}.xlsx"
+        )
+
+    except Exception as e:
+        print(f"Error generando Excel individual: {e}")
+        flash("Ocurrió un error al generar la ficha en Excel.", "error")
+        return redirect(url_for("panel_tutor" if g.rol == "tutor" else "panel_alumno"))
+
+PLANTILLA_GENERAL = os.path.join(CARPETA_BASE, "REPORTE_GRUPO_TUTORIAS.xlsx")
+
+@app.route("/reporte-general-excel")
+@requiere_rol("tutor", "coordinador")
+def reporte_general_excel():
+    try:
+        if not os.path.exists(PLANTILLA_GENERAL):
+            flash("La plantilla de reporte general no existe en el servidor", "error")
+            return redirect(url_for("panel_tutor" if g.rol == "tutor" else "panel_coordinador"))
+
+        wb = openpyxl.load_workbook(PLANTILLA_GENERAL)
+        ws = wb.active
+
+        # Llenar encabezados
+        if g.rol == "tutor":
+            tutor_obj = Usuario.query.get(g.uid)
+            ws["C4"] = tutor_obj.nombre_completo if tutor_obj else "N/A"
+            tutorias = Tutoria.query.filter_by(id_tutor=g.uid).all()
+        else:
+            ws["C4"] = "Coordinador General"
+            tutorias = Tutoria.query.all()
+
+        ws["C5"] = datetime.now().strftime("%d/%m/%Y")
+
+        # Llenar la tabla a partir de la fila 9
+        fila_inicio = 9
+        for idx, tut in enumerate(tutorias, start=1):
+            ws[f"A{fila_inicio}"] = idx
+            ws[f"B{fila_inicio}"] = tut.alumno.usuario.credencial if (tut.alumno and tut.alumno.usuario) else "N/A"
+            ws[f"C{fila_inicio}"] = tut.alumno.usuario.nombre_completo if (tut.alumno and tut.alumno.usuario) else "N/A"
+            ws[f"D{fila_inicio}"] = tut.fecha.strftime("%d/%m/%Y") if tut.fecha else "N/A"
+            ws[f"E{fila_inicio}"] = tut.tema or "N/A"
+            ws[f"F{fila_inicio}"] = tut.estado or "N/A"
+            fila_inicio += 1
+
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+
+        return send_file(
+            buffer,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name="Reporte_General_Tutorias.xlsx"
+        )
+
+    except Exception as e:
+        print(f"Error generando Excel general: {e}")
+        flash("Ocurrió un error al generar el reporte general en Excel.", "error")
+        return redirect(url_for("panel_tutor" if g.rol == "tutor" else "panel_coordinador"))
+
 # ===================== COORDINADOR =====================
 @app.route("/panel-coordinador")
 @requiere_rol("coordinador")
