@@ -186,7 +186,7 @@
                         <div class="min-w-0">
                             <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Alumnos</p>
                             <h4 class="text-2xl font-bold text-slate-800 leading-tight mt-0.5">
-                                {{ usuarios|selectattr('tipo','equalto','alumno')|list|length if usuarios is defined else '0' }}
+                                {{ total_alumnos if total_alumnos is defined else 0 }}
                             </h4>
                         </div>
                     </div>
@@ -198,7 +198,7 @@
                         <div class="min-w-0">
                             <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tutores</p>
                             <h4 class="text-2xl font-bold text-slate-800 leading-tight mt-0.5">
-                                {{ usuarios|selectattr('tipo','equalto','tutor')|list|length if usuarios is defined else '0' }}
+                                {{ total_tutores if total_tutores is defined else 0 }}
                             </h4>
                         </div>
                     </div>
@@ -210,7 +210,7 @@
                         <div class="min-w-0">
                             <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tutorías Totales</p>
                             <h4 class="text-2xl font-bold text-slate-800 leading-tight mt-0.5">
-                                {{ tutorias|length if tutorias is defined else '0' }}
+                                {{ total_tutorias if total_tutorias is defined else 0 }}
                             </h4>
                         </div>
                     </div>
@@ -405,7 +405,7 @@
                                     {% for tut in tutorias %}
                                     <tr class="hover:bg-slate-50/70 transition-colors">
                                         <td class="py-4 px-6 font-semibold text-slate-800 whitespace-nowrap">
-                                            {{ tut.alumno.usuario.nombre_completo }}
+                                            {{ tut.alumno.usuario.nombre_completo if tut.alumno and tut.alumno.usuario else 'Sin asignar' }}
                                         </td>
                                         <td class="py-4 px-6 text-xs text-slate-600 whitespace-nowrap">
                                             {{ tut.fecha.strftime('%d/%m/%Y') if tut.fecha.strftime is defined else tut.fecha }}
@@ -846,114 +846,127 @@
 
 <!-- Initializer & Tab Switcher Script + Chart.js -->
 <script>
+    let chartTutoriasInstance = null;
+    let chartUsuariosInstance = null;
+
     document.addEventListener("DOMContentLoaded", function () {
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
 
-        // Inicializar Gráficas
-        if (typeof Chart !== 'undefined') {
-            Chart.defaults.font.family = "'Inter', system-ui, -apple-system, sans-serif";
-            Chart.defaults.color = '#64748B';
-
-            const numSolicitadas = {{ solicitadas if solicitadas is defined else 0 }};
-            const numAsignadas = {{ asignadas if asignadas is defined else 0 }};
-            const numRealizadas = {{ realizadas if realizadas is defined else 0 }};
-
-            const numAlumnos = {{ total_alumnos if total_alumnos is defined else 0 }};
-            const numTutores = {{ total_tutores if total_tutores is defined else 0 }};
-            const numCoordinadores = {{ total_coordinadores if total_coordinadores is defined else 0 }};
-
-            // 1. Gráfica de Tutorías
-            const ctx1 = document.getElementById('graficaTutorias');
-            if (ctx1) {
-                new Chart(ctx1.getContext('2d'), {
-                    type: 'bar',
-                    data: {
-                        labels: ['Solicitadas', 'Asignadas', 'Realizadas'],
-                        datasets: [{
-                            label: 'Número de Tutorías',
-                            data: [numSolicitadas, numAsignadas, numRealizadas],
-                            backgroundColor: ['#F59E0B', '#0EA5E9', '#10B981'],
-                            hoverBackgroundColor: ['#D97706', '#0284C7', '#059669'],
-                            borderRadius: 10,
-                            borderSkipped: false,
-                            maxBarThickness: 48
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        animation: { duration: 1200, easing: 'easeOutQuart' },
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                backgroundColor: '#0F172A',
-                                titleFont: { size: 12, weight: '600' },
-                                bodyFont: { size: 12 },
-                                padding: 12,
-                                cornerRadius: 8,
-                                displayColors: false,
-                                callbacks: {
-                                    label: function(context) { return ` Total: ${context.parsed.y} sesiones`; }
-                                }
-                            }
-                        },
-                        scales: {
-                            y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#F1F5F9' } },
-                            x: { grid: { display: false }, ticks: { font: { size: 11, weight: '600' } } }
-                        }
-                    }
-                });
-            }
-
-            // 2. Gráfica de Usuarios
-            const ctx2 = document.getElementById('graficaUsuarios');
-            if (ctx2) {
-                new Chart(ctx2.getContext('2d'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Alumnos', 'Tutores', 'Coordinadores'],
-                        datasets: [{
-                            data: [numAlumnos, numTutores, numCoordinadores],
-                            backgroundColor: ['#2563EB', '#10B981', '#8B5CF6'],
-                            hoverBackgroundColor: ['#1D4ED8', '#059669', '#6D28D9'],
-                            borderWidth: 3,
-                            borderColor: '#FFFFFF',
-                            spacing: 4,
-                            hoverOffset: 6
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        cutout: '65%',
-                        minAngle: 15,
-                        animation: { animateScale: true, animateRotate: true, duration: 1200 },
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: { padding: 18, usePointStyle: true, pointStyle: 'circle', font: { size: 11, weight: '600' } }
-                            },
-                            tooltip: {
-                                backgroundColor: '#0F172A',
-                                padding: 12,
-                                cornerRadius: 8,
-                                callbacks: {
-                                    label: function(context) {
-                                        let value = context.parsed || 0;
-                                        let total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                        let percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                        return ` ${context.label}: ${value} usuario(s) (${percentage}%)`;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
+        // Si la sección activa es estadísticas al cargar la página
+        if (document.getElementById('sec-estadisticas').classList.contains('active')) {
+            renderCharts();
         }
     });
+
+    function renderCharts() {
+        if (typeof Chart === 'undefined') return;
+
+        Chart.defaults.font.family = "'Inter', system-ui, -apple-system, sans-serif";
+        Chart.defaults.color = '#64748B';
+
+        const numSolicitadas = Number("{{ solicitadas if solicitadas is defined else 0 }}");
+        const numAsignadas = Number("{{ asignadas if asignadas is defined else 0 }}");
+        const numRealizadas = Number("{{ realizadas if realizadas is defined else 0 }}");
+
+        const numAlumnos = Number("{{ total_alumnos if total_alumnos is defined else 0 }}");
+        const numTutores = Number("{{ total_tutores if total_tutores is defined else 0 }}");
+        const numCoordinadores = Number("{{ total_coordinadores if total_coordinadores is defined else 0 }}");
+
+        // 1. Gráfica de Tutorías
+        const ctx1 = document.getElementById('graficaTutorias');
+        if (ctx1) {
+            if (chartTutoriasInstance) chartTutoriasInstance.destroy();
+
+            chartTutoriasInstance = new Chart(ctx1.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Solicitadas', 'Asignadas', 'Realizadas'],
+                    datasets: [{
+                        label: 'Número de Tutorías',
+                        data: [numSolicitadas, numAsignadas, numRealizadas],
+                        backgroundColor: ['#F59E0B', '#0EA5E9', '#10B981'],
+                        hoverBackgroundColor: ['#D97706', '#0284C7', '#059669'],
+                        borderRadius: 10,
+                        borderSkipped: false,
+                        maxBarThickness: 48
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 1000, easing: 'easeOutQuart' },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#0F172A',
+                            titleFont: { size: 12, weight: '600' },
+                            bodyFont: { size: 12 },
+                            padding: 12,
+                            cornerRadius: 8,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) { return ` Total: ${context.parsed.y} sesiones`; }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#F1F5F9' } },
+                        x: { grid: { display: false }, ticks: { font: { size: 11, weight: '600' } } }
+                    }
+                }
+            });
+        }
+
+        // 2. Gráfica de Usuarios
+        const ctx2 = document.getElementById('graficaUsuarios');
+        if (ctx2) {
+            if (chartUsuariosInstance) chartUsuariosInstance.destroy();
+
+            chartUsuariosInstance = new Chart(ctx2.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Alumnos', 'Tutores', 'Coordinadores'],
+                    datasets: [{
+                        data: [numAlumnos, numTutores, numCoordinadores],
+                        backgroundColor: ['#2563EB', '#10B981', '#8B5CF6'],
+                        hoverBackgroundColor: ['#1D4ED8', '#059669', '#6D28D9'],
+                        borderWidth: 3,
+                        borderColor: '#FFFFFF',
+                        spacing: 4,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    minAngle: 15,
+                    animation: { animateScale: true, animateRotate: true, duration: 1000 },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { padding: 18, usePointStyle: true, pointStyle: 'circle', font: { size: 11, weight: '600' } }
+                        },
+                        tooltip: {
+                            backgroundColor: '#0F172A',
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    let value = context.parsed || 0;
+                                    let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    let percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                    return ` ${context.label}: ${value} usuario(s) (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
 
     function switchTab(sectionId, title, btnElement) {
         document.querySelectorAll('.tab-content-section').forEach(sec => {
@@ -970,6 +983,11 @@
         btnElement.classList.add('bg-emerald-800/60', 'text-white', 'border', 'border-emerald-600/40');
 
         document.getElementById('current-page-title').innerText = title;
+
+        // Renderizar/actualizar las gráficas si se ingresa a la pestaña de estadísticas
+        if (sectionId === 'sec-estadisticas') {
+            setTimeout(renderCharts, 100);
+        }
 
         const drawerCheckbox = document.getElementById('menu-drawer');
         if (drawerCheckbox) drawerCheckbox.checked = false;
