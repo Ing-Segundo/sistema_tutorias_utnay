@@ -2,7 +2,5 @@ Flask
 Flask-SQLAlchemy
 Werkzeug
 PyJWT
+fpdf2
 openpyxl
-gunicorn
-fpdf
-reportlab
