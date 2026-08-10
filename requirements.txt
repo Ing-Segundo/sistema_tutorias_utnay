@@ -6,3 +6,4 @@ reportlab
 openpyxl
 gunicorn
 fpdf2
+fpdf
