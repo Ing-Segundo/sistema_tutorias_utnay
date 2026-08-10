@@ -1,6 +1,8 @@
-Flask
-Flask-SQLAlchemy
-Werkzeug
-PyJWT
-fpdf2
-openpyxl
+Flask>=3.0.0
+Flask-SQLAlchemy>=3.1.0
+Werkzeug>=3.0.0
+PyJWT>=2.8.0
+cryptography>=41.0.0
+fpdf2>=2.7.0
+openpyxl>=3.1.0
+gunicorn>=21.2.0
