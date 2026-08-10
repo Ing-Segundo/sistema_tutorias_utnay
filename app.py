@@ -281,9 +281,13 @@ def generar_pdf(datos, titulo, columnas):
             pdf.cell(anchos[i], 8, limpiar_texto(celda), border=1, align="C")
         pdf.ln()
     
-    buffer = io.BytesIO()
-    pdf_bytes = pdf.output(dest='S').encode('latin-1', 'replace')
-    buffer.write(pdf_bytes)
+    pdf_output = pdf.output(dest='S')
+    if isinstance(pdf_output, str):
+        pdf_bytes = pdf_output.encode('latin-1', 'replace')
+    else:
+        pdf_bytes = bytes(pdf_output)
+        
+    buffer = io.BytesIO(pdf_bytes)
     buffer.seek(0)
     return buffer
 
@@ -521,7 +525,7 @@ def completar_tutoria(id):
 def reporte_tutor_pdf():
     tutor = Tutor.query.filter_by(usuario_id=g.uid).first()
     tutorias = Tutoria.query.filter_by(id_tutor=g.uid).all()
-    datos = [(t.alumno.usuario.nombre_completo if t.alumno and t.alumno.usuario else 'Sin Alumno', t.fecha.strftime("%d/%m/%Y"), t.tema, t.estado) for t in tutorias]
+    datos = [(t.alumno.usuario.nombre_completo if t.alumno and t.alumno.usuario else 'Sin Alumno', t.fecha.strftime("%d/%m/%Y") if t.fecha else '', t.tema, t.estado) for t in tutorias]
     buffer_pdf = generar_pdf(datos, f"Tutorías a mi cargo - {tutor.usuario.nombre_completo if tutor and tutor.usuario else ''}", ["Alumno", "Fecha", "Tema", "Estado"])
     return send_file(buffer_pdf, mimetype='application/pdf', as_attachment=True, download_name="tutorias_tutor.pdf")
 
@@ -597,31 +601,48 @@ def descargar_ficha_tutoria_pdf(id):
         if not horario:
             horario = "N/A"
 
-        datos_pdf = [
-            ["Alumno:", nombre_alumno, "Matricula:", matricula_alumno],
-            ["Carrera:", tutoria.carrera or "TIC", "Grupo / Fecha:", f"{tutoria.grupo or 'N/A'} / {fecha_str}"],
-            ["Tutor:", nombre_tutor, "Horario:", horario],
-            ["Motivo:", tutoria.motivo or tutoria.tema or "N/A", "Estado:", tutoria.estado or "N/A"],
-            ["Puntos Relevantes:", tutoria.puntos_relevantes or "N/A", "", ""],
-            ["Compromisos:", tutoria.compromisos or "N/A", "", ""]
-        ]
-        
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", "B", 14)
-        
         pdf.cell(0, 10, limpiar_texto(f"FICHA DE TUTORIA INDIVIDUAL No. {tutoria.id}"), ln=1, align="C")
         pdf.ln(5)
-        
-        pdf.set_font("Arial", "", 9)
-        anchos = [40, 50, 40, 50]
-        for fila in datos_pdf:
-            for i, celda in enumerate(fila):
-                texto = limpiar_texto(celda)
-                pdf.cell(anchos[i], 8, texto, border=1, align="L")
-            pdf.ln()
 
-        pdf_bytes = pdf.output(dest='S').encode('latin-1', 'replace')
+        def agregar_fila_par(lbl1, val1, lbl2, val2):
+            pdf.set_font("Arial", "B", 9)
+            pdf.cell(35, 7, limpiar_texto(lbl1), border=1)
+            pdf.set_font("Arial", "", 9)
+            pdf.cell(55, 7, limpiar_texto(val1), border=1)
+            pdf.set_font("Arial", "B", 9)
+            pdf.cell(35, 7, limpiar_texto(lbl2), border=1)
+            pdf.set_font("Arial", "", 9)
+            pdf.cell(55, 7, limpiar_texto(val2), border=1, ln=1)
+
+        def agregar_bloque_texto(titulo_bloque, texto_bloque):
+            pdf.set_font("Arial", "B", 9)
+            pdf.cell(180, 7, limpiar_texto(titulo_bloque), border=1, ln=1, align="L")
+            pdf.set_font("Arial", "", 9)
+            pdf.multi_cell(180, 6, limpiar_texto(texto_bloque or "N/A"), border=1, align="L")
+
+        agregar_fila_par("Alumno:", nombre_alumno, "Matricula:", matricula_alumno)
+        agregar_fila_par("Carrera:", tutoria.carrera or "TIC", "Grupo / Fecha:", f"{tutoria.grupo or 'N/A'} / {fecha_str}")
+        agregar_fila_par("Tutor:", nombre_tutor, "Horario:", horario)
+        agregar_fila_par("Estado:", tutoria.estado or "N/A", "", "")
+        pdf.ln(3)
+
+        agregar_bloque_texto("Motivo:", tutoria.motivo or tutoria.tema)
+        pdf.ln(2)
+        agregar_bloque_texto("Puntos Relevantes:", tutoria.puntos_relevantes)
+        pdf.ln(2)
+        agregar_bloque_texto("Compromisos:", tutoria.compromisos)
+        pdf.ln(2)
+        agregar_bloque_texto("Observaciones:", tutoria.observaciones)
+
+        pdf_output = pdf.output(dest='S')
+        if isinstance(pdf_output, str):
+            pdf_bytes = pdf_output.encode('latin-1', 'replace')
+        else:
+            pdf_bytes = bytes(pdf_output)
+
         buffer_pdf = io.BytesIO(pdf_bytes)
         buffer_pdf.seek(0)
 
@@ -652,18 +673,15 @@ def descargar_ficha_tutoria_excel(id):
             flash("La plantilla de reporte individual no se encuentra en el servidor", "error")
             return redirect(url_for("panel_tutor" if g.rol == "tutor" else "panel_alumno"))
 
-        # Cargar plantilla Excel
         wb = openpyxl.load_workbook(PLANTILLA_INDIVIDUAL)
         ws = wb.active
 
-        # Llenar variables
         nombre_alumno = tutoria.alumno.usuario.nombre_completo if (tutoria.alumno and tutoria.alumno.usuario) else "N/A"
         matricula_alumno = tutoria.alumno.usuario.credencial if (tutoria.alumno and tutoria.alumno.usuario) else "N/A"
         tutor_obj = Usuario.query.get(tutoria.id_tutor)
         nombre_tutor = tutor_obj.nombre_completo if tutor_obj else "N/A"
         fecha_str = tutoria.fecha.strftime("%d/%m/%Y") if tutoria.fecha else "N/A"
 
-        # Escribir en celdas específicas según formato
         ws["C4"] = nombre_alumno
         ws["C5"] = matricula_alumno
         ws["C6"] = tutoria.carrera or "TIC"
@@ -676,7 +694,6 @@ def descargar_ficha_tutoria_excel(id):
         ws["C18"] = tutoria.compromisos or "N/A"
         ws["C22"] = tutoria.observaciones or "N/A"
 
-        # Guardar en memoria y enviar
         buffer = io.BytesIO()
         wb.save(buffer)
         buffer.seek(0)
@@ -706,7 +723,6 @@ def reporte_general_excel():
         wb = openpyxl.load_workbook(PLANTILLA_GENERAL)
         ws = wb.active
 
-        # Llenar encabezados
         if g.rol == "tutor":
             tutor_obj = Usuario.query.get(g.uid)
             ws["C4"] = tutor_obj.nombre_completo if tutor_obj else "N/A"
@@ -717,7 +733,6 @@ def reporte_general_excel():
 
         ws["C5"] = datetime.now().strftime("%d/%m/%Y")
 
-        # Llenar la tabla a partir de la fila 9
         fila_inicio = 9
         for idx, tut in enumerate(tutorias, start=1):
             ws[f"A{fila_inicio}"] = idx
