@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from fpdf import FPDF
 from functools import wraps
 import jwt, shutil, os, threading, time
+import openpyxl
 
 # Configuración adaptada para reconocer la carpeta 'assets' en Render/GitHub
 app = Flask(__name__, static_folder='assets', static_url_path='/assets')
@@ -12,6 +13,8 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'clave_segura_sistema_tu
 
 CARPETA_BASE = os.path.abspath(os.path.dirname(__file__))
 RUTA_DB = os.path.join(CARPETA_BASE, "sistema_tutorias.db")
+PLANTILLA_EXCEL = os.path.join(CARPETA_BASE, "Reporte_Tutoria_Individual_UTN.xlsx")
+
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{RUTA_DB}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
@@ -162,7 +165,7 @@ ALUMNOS_INICIALES = [
     ("TIC-310073", "Rivera Orozco Vanessa de Jesús", "juan.tovar"),
     ("TIC-310007", "Samaniego de León Andy Alexander", "juan.tovar"),
     ("TIC-310027", "Díaz Herrera Víctor Manuel", "juan.tovar"),
-    ("TIC-310019", "Larios García Cristopher", "juan.tovar"),
+    ("TIC-31019", "Larios García Cristopher", "juan.tovar"),
     ("TIC-300133", "Marrujo Arellano Crystopher", "juan.tovar"),
     ("TIC-300170", "Navarro López Antonio Damián", "juan.tovar"),
     ("TIC-310121", "Peña Arvizu Jorge Gabriel", "juan.tovar"),
@@ -523,7 +526,7 @@ def reportes_tutor():
     pendientes = sum(1 for t in mis_tutorias if t.estado in ["Solicitada", "Confirmada", "Asignada por tutor"])
     return render_template("reportes_tutor.html", total=total, realizadas=realizadas, pendientes=pendientes, alumnos=mis_alumnos, tutorias=mis_tutorias)
 
-# ===================== TUTORÍA INDIVIDUAL =====================
+# ===================== TUTORÍA INDIVIDUAL Y GENERACIÓN DE FICHA DESDE EXCEL =====================
 @app.route("/iniciar-tutoria/<int:id>")
 @requiere_rol("tutor")
 def iniciar_tutoria(id):
@@ -571,14 +574,57 @@ def descargar_ficha_tutoria_pdf(id):
     if g.rol == "tutor" and tutoria.id_tutor != g.uid:
         flash("No tienes permiso", "error")
         return redirect(url_for("panel_tutor"))
-    datos = [
-        ["Alumno", tutoria.alumno.usuario.nombre_completo if tutoria.alumno and tutoria.alumno.usuario else "N/A"],
-        ["Fecha", tutoria.fecha.strftime("%d/%m/%Y") if tutoria.fecha else "N/A"],
-        ["Tema", tutoria.tema],
-        ["Estado", tutoria.estado]
-    ]
-    ruta = generar_pdf(datos, f"Ficha de Tutoría #{tutoria.id}", ["Campo", "Detalle"])
-    return send_file(ruta, as_attachment=True, download_name=f"ficha_tutoria_{tutoria.id}.pdf")
+
+    # Cargar y rellenar la plantilla Excel con los datos exactos de la tutoría
+    if os.path.exists(PLANTILLA_EXCEL):
+        wb = openpyxl.load_workbook(PLANTILLA_EXCEL)
+        ws = wb.active
+
+        nombre_alumno = tutoria.alumno.usuario.nombre_completo if tutoria.alumno and tutoria.alumno.usuario else ""
+        matricula_alumno = tutoria.alumno.usuario.credencial if tutoria.alumno and tutoria.alumno.usuario else ""
+        tutor_obj = Usuario.query.get(tutoria.id_tutor)
+        nombre_tutor = tutor_obj.nombre_completo if tutor_obj else ""
+        fecha_str = tutoria.fecha.strftime("%d/%m/%Y") if tutoria.fecha else ""
+
+        # Mapeo de celdas según la estructura de la ficha oficial UTN
+        ws['C8'] = nombre_alumno
+        ws['C9'] = matricula_alumno
+        ws['C10'] = tutoria.carrera or "Tecnologías de la Información"
+        ws['G8'] = tutoria.grupo or "91"
+        ws['G9'] = fecha_str
+        ws['G10'] = f"{tutoria.hr_inicio} - {tutoria.hr_salida}" if tutoria.hr_inicio else ""
+        ws['C12'] = nombre_tutor
+        ws['C14'] = tutoria.motivo or tutoria.tema
+        ws['B17'] = tutoria.puntos_relevantes or ""
+        ws['B22'] = tutoria.compromisos or ""
+        ws['B27'] = tutoria.observaciones or ""
+
+        # Guardar en archivo temporal
+        nombre_salida_excel = os.path.join(CARPETA_BASE, f"Ficha_Tutoria_{tutoria.id}.xlsx")
+        wb.save(nombre_salida_excel)
+
+        # Generar versión PDF enriquecida basada en el formato
+        datos_pdf = [
+            ["Alumno:", nombre_alumno, "Matrícula:", matricula_alumno],
+            ["Carrera:", tutoria.carrera or "TIC", "Grupo / Fecha:", f"{tutoria.grupo} / {fecha_str}"],
+            ["Tutor:", nombre_tutor, "Horario:", f"{tutoria.hr_inicio} - {tutoria.hr_salida}"],
+            ["Motivo:", tutoria.motivo or tutoria.tema, "Estado:", tutoria.estado],
+            ["Puntos Relevantes:", tutoria.puntos_relevantes or "N/A", "", ""],
+            ["Compromisos:", tutoria.compromisos or "N/A", "", ""]
+        ]
+        ruta_pdf = generar_pdf(datos_pdf, f"FICHA DE TUTORÍA INDIVIDUAL #{tutoria.id}", ["Campo", "Valor", "Detalle", "Información"])
+        
+        return send_file(ruta_pdf, as_attachment=True, download_name=f"Ficha_Tutoria_{tutoria.id}.pdf")
+    else:
+        # Si no existe la plantilla excel, genera el PDF plano por defecto
+        datos = [
+            ["Alumno", tutoria.alumno.usuario.nombre_completo if tutoria.alumno and tutoria.alumno.usuario else "N/A"],
+            ["Fecha", tutoria.fecha.strftime("%d/%m/%Y") if tutoria.fecha else "N/A"],
+            ["Tema", tutoria.tema],
+            ["Estado", tutoria.estado]
+        ]
+        ruta = generar_pdf(datos, f"Ficha de Tutoría #{tutoria.id}", ["Campo", "Detalle"])
+        return send_file(ruta, as_attachment=True, download_name=f"ficha_tutoria_{tutoria.id}.pdf")
 
 # ===================== COORDINADOR =====================
 @app.route("/panel-coordinador")
