@@ -5,3 +5,4 @@ PyJWT
 reportlab
 openpyxl
 gunicorn
+fpdf2
