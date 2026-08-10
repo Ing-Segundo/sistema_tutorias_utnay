@@ -258,26 +258,34 @@ def tarea_respaldo_automatico():
 threading.Thread(target=tarea_respaldo_automatico, daemon=True).start()
 
 # ===================== FUNCIONES AUXILIARES =====================
+def limpiar_texto(texto):
+    """Limpia cadenas para ser compatibles con la codificación de FPDF en latin-1"""
+    if texto is None:
+        return ""
+    return str(texto).encode('latin-1', 'replace').decode('latin-1')
+
 def generar_pdf(datos, titulo, columnas):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, titulo.encode('latin-1', 'replace').decode('latin-1'), ln=True, align="C")
+    pdf.cell(0, 10, limpiar_texto(titulo), ln=True, align="C")
     pdf.ln(5)
     pdf.set_font("Arial", "B", 10)
     anchos = [40, 50, 40, 50]
     for i, col in enumerate(columnas):
-        pdf.cell(anchos[i], 8, col.encode('latin-1', 'replace').decode('latin-1'), border=1, align="C")
+        pdf.cell(anchos[i], 8, limpiar_texto(col), border=1, align="C")
     pdf.ln()
     pdf.set_font("Arial", "", 9)
     for fila in datos:
         for i, celda in enumerate(fila):
-            texto = str(celda).encode('latin-1', 'replace').decode('latin-1')
-            pdf.cell(anchos[i], 8, texto, border=1, align="C")
+            pdf.cell(anchos[i], 8, limpiar_texto(celda), border=1, align="C")
         pdf.ln()
-    ruta = os.path.join(CARPETA_BASE, f"reporte_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf")
-    pdf.output(ruta)
-    return ruta
+    
+    buffer = io.BytesIO()
+    pdf_bytes = pdf.output(dest='S').encode('latin-1', 'replace')
+    buffer.write(pdf_bytes)
+    buffer.seek(0)
+    return buffer
 
 # ===================== JWT COMPLEMENTARIO =====================
 JWT_ALGORITMO = "HS256"
@@ -514,8 +522,8 @@ def reporte_tutor_pdf():
     tutor = Tutor.query.filter_by(usuario_id=g.uid).first()
     tutorias = Tutoria.query.filter_by(id_tutor=g.uid).all()
     datos = [(t.alumno.usuario.nombre_completo if t.alumno and t.alumno.usuario else 'Sin Alumno', t.fecha.strftime("%d/%m/%Y"), t.tema, t.estado) for t in tutorias]
-    ruta = generar_pdf(datos, f"Tutorías a mi cargo - {tutor.usuario.nombre_completo if tutor and tutor.usuario else ''}", ["Alumno", "Fecha", "Tema", "Estado"])
-    return send_file(ruta, as_attachment=True, download_name="tutorias_tutor.pdf")
+    buffer_pdf = generar_pdf(datos, f"Tutorías a mi cargo - {tutor.usuario.nombre_completo if tutor and tutor.usuario else ''}", ["Alumno", "Fecha", "Tema", "Estado"])
+    return send_file(buffer_pdf, mimetype='application/pdf', as_attachment=True, download_name="tutorias_tutor.pdf")
 
 @app.route("/reportes-tutor")
 @requiere_rol("tutor")
@@ -575,46 +583,24 @@ def descargar_ficha_tutoria_pdf(id):
     try:
         tutoria = Tutoria.query.get_or_404(id)
         
-        # Validación de permisos
         if g.rol == "tutor" and tutoria.id_tutor != g.uid:
             flash("No tienes permiso para ver esta tutoría", "error")
             return redirect(url_for("panel_tutor"))
 
-        # Obtener datos de manera segura contra nulos
         nombre_alumno = tutoria.alumno.usuario.nombre_completo if (tutoria.alumno and tutoria.alumno.usuario) else "Sin Alumno"
         matricula_alumno = tutoria.alumno.usuario.credencial if (tutoria.alumno and tutoria.alumno.usuario) else "N/A"
         tutor_obj = Usuario.query.get(tutoria.id_tutor)
         nombre_tutor = tutor_obj.nombre_completo if tutor_obj else "Sin Tutor"
         fecha_str = tutoria.fecha.strftime("%d/%m/%Y") if tutoria.fecha else "Sin Fecha"
 
-        # Uso del directorio temporal del sistema (/tmp) para evitar PermissionError en producción
-        carpeta_temp = tempfile.gettempdir()
+        horario = f"{tutoria.hr_inicio or ''} - {tutoria.hr_salida or ''}".strip(" -")
+        if not horario:
+            horario = "N/A"
 
-        # Rellenar plantilla Excel si existe
-        if os.path.exists(PLANTILLA_EXCEL):
-            wb = openpyxl.load_workbook(PLANTILLA_EXCEL)
-            ws = wb.active
-
-            ws['C8'] = nombre_alumno
-            ws['C9'] = matricula_alumno
-            ws['C10'] = tutoria.carrera or "Tecnologías de la Información"
-            ws['G8'] = tutoria.grupo or "91"
-            ws['G9'] = fecha_str
-            ws['G10'] = f"{tutoria.hr_inicio} - {tutoria.hr_salida}" if tutoria.hr_inicio else ""
-            ws['C12'] = nombre_tutor
-            ws['C14'] = tutoria.motivo or tutoria.tema
-            ws['B17'] = tutoria.puntos_relevantes or ""
-            ws['B22'] = tutoria.compromisos or ""
-            ws['B27'] = tutoria.observaciones or ""
-
-            nombre_salida_excel = os.path.join(carpeta_temp, f"Ficha_Tutoria_{tutoria.id}.xlsx")
-            wb.save(nombre_salida_excel)
-
-        # Generar PDF en el directorio temporal
         datos_pdf = [
-            ["Alumno:", nombre_alumno, "Matrícula:", matricula_alumno],
-            ["Carrera:", tutoria.carrera or "TIC", "Grupo / Fecha:", f"{tutoria.grupo or ''} / {fecha_str}"],
-            ["Tutor:", nombre_tutor, "Horario:", f"{tutoria.hr_inicio or ''} - {tutoria.hr_salida or ''}"],
+            ["Alumno:", nombre_alumno, "Matricula:", matricula_alumno],
+            ["Carrera:", tutoria.carrera or "TIC", "Grupo / Fecha:", f"{tutoria.grupo or 'N/A'} / {fecha_str}"],
+            ["Tutor:", nombre_tutor, "Horario:", horario],
             ["Motivo:", tutoria.motivo or tutoria.tema or "N/A", "Estado:", tutoria.estado or "N/A"],
             ["Puntos Relevantes:", tutoria.puntos_relevantes or "N/A", "", ""],
             ["Compromisos:", tutoria.compromisos or "N/A", "", ""]
@@ -623,21 +609,28 @@ def descargar_ficha_tutoria_pdf(id):
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", "B", 14)
-        pdf.cell(0, 10, f"FICHA DE TUTORIA INDIVIDUAL #{tutoria.id}".encode('latin-1', 'replace').decode('latin-1'), ln=1, align="C")
+        
+        pdf.cell(0, 10, limpiar_texto(f"FICHA DE TUTORIA INDIVIDUAL No. {tutoria.id}"), ln=1, align="C")
         pdf.ln(5)
         
         pdf.set_font("Arial", "", 9)
         anchos = [40, 50, 40, 50]
         for fila in datos_pdf:
             for i, celda in enumerate(fila):
-                texto = str(celda).encode('latin-1', 'replace').decode('latin-1')
+                texto = limpiar_texto(celda)
                 pdf.cell(anchos[i], 8, texto, border=1, align="L")
             pdf.ln()
 
-        ruta_pdf = os.path.join(carpeta_temp, f"Ficha_Tutoria_{tutoria.id}.pdf")
-        pdf.output(ruta_pdf)
+        pdf_bytes = pdf.output(dest='S').encode('latin-1', 'replace')
+        buffer_pdf = io.BytesIO(pdf_bytes)
+        buffer_pdf.seek(0)
 
-        return send_file(ruta_pdf, as_attachment=True, download_name=f"Ficha_Tutoria_{tutoria.id}.pdf")
+        return send_file(
+            buffer_pdf, 
+            mimetype='application/pdf', 
+            as_attachment=True, 
+            download_name=f"Ficha_Tutoria_{tutoria.id}.pdf"
+        )
 
     except Exception as e:
         print(f"Error generando la ficha PDF: {e}")
@@ -796,8 +789,8 @@ def config_respaldos():
 @requiere_rol("coordinador")
 def reporte_general_pdf():
     datos = [(u.tipo.upper(), u.credencial, u.nombre_completo, "Bloqueado" if u.bloqueado else "Activo") for u in Usuario.query.all()]
-    ruta = generar_pdf(datos, "Reporte General de Usuarios", ["Rol", "Credencial", "Nombre", "Estado"])
-    return send_file(ruta, as_attachment=True, download_name="reporte_general.pdf")
+    buffer_pdf = generar_pdf(datos, "Reporte General de Usuarios", ["Rol", "Credencial", "Nombre", "Estado"])
+    return send_file(buffer_pdf, mimetype='application/pdf', as_attachment=True, download_name="reporte_general.pdf")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
