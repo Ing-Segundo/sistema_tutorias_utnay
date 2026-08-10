@@ -1,0 +1,7 @@
+Flask
+Flask-SQLAlchemy
+Werkzeug
+PyJWT
+reportlab
+openpyxl
+gunicorn
