@@ -17,8 +17,8 @@ CARPETA_BASE = os.path.abspath(os.path.dirname(__file__))
 RUTA_DB = os.path.join(CARPETA_BASE, "sistema_tutorias.db")
 
 # Rutas de las plantillas de Excel que contienen el formato visual
-PLANTILLA_INDIVIDUAL = os.path.join(CARPETA_BASE, "Reporte_Tutoria_Individual_UTN_3.xlsx")
-PLANTILLA_GENERAL = os.path.join(CARPETA_BASE, "REPORTE_GRUPO_TUTORIAS_3.xlsx")
+PLANTILLA_INDIVIDUAL = os.path.join(CARPETA_BASE, "Reporte_Tutoria_Individual_UTN.xlsx")
+PLANTILLA_GENERAL = os.path.join(CARPETA_BASE, "REPORTE_GRUPO_TUTORIAS.xlsx")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{RUTA_DB}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -267,6 +267,7 @@ def limpiar_texto(texto):
     return str(texto).encode('latin-1', 'replace').decode('latin-1')
 
 def generar_pdf(datos, titulo, columnas):
+    print(f"[REPORTES] Generando PDF: {titulo} | Registros: {len(datos)}")
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 16)
@@ -284,7 +285,11 @@ def generar_pdf(datos, titulo, columnas):
         pdf.ln()
     
     buffer = io.BytesIO()
-    pdf_bytes = pdf.output(dest='S').encode('latin-1', 'replace')
+    pdf_bytes = pdf.output()
+    if isinstance(pdf_bytes, bytearray):
+        pdf_bytes = bytes(pdf_bytes)
+    elif isinstance(pdf_bytes, str):
+        pdf_bytes = pdf_bytes.encode("latin-1", "replace")
     buffer.write(pdf_bytes)
     buffer.seek(0)
     return buffer
@@ -620,7 +625,13 @@ def descargar_ficha_tutoria_pdf(id):
                 pdf.cell(anchos[i], 8, limpiar_texto(celda), border=1, align="L")
             pdf.ln()
 
-        buffer_pdf = io.BytesIO(pdf.output(dest='S').encode('latin-1', 'replace'))
+        pdf_bytes = pdf.output()
+        if isinstance(pdf_bytes, bytearray):
+            pdf_bytes = bytes(pdf_bytes)
+        elif isinstance(pdf_bytes, str):
+            pdf_bytes = pdf_bytes.encode("latin-1", "replace")
+
+        buffer_pdf = io.BytesIO(pdf_bytes)
         buffer_pdf.seek(0)
 
         return send_file(
@@ -631,7 +642,7 @@ def descargar_ficha_tutoria_pdf(id):
         )
 
     except Exception as e:
-        print(f"Error generando la ficha PDF: {e}")
+        print(f"[REPORTES] ERROR generando la ficha PDF (tutoría {id}): {type(e).__name__}: {e}")
         flash("Ocurrió un error al generar la ficha en PDF.", "error")
         return redirect(url_for("panel_tutor" if g.rol == "tutor" else "panel_alumno"))
 
@@ -644,7 +655,8 @@ def descargar_ficha_tutoria_excel(id):
             flash("No tienes permiso para ver esta tutoría", "error")
             return redirect(url_for("panel_tutor"))
 
-        if not os.path.exists(PLANTILLA_INDIVIDUAL):
+        if not os.path.isfile(PLANTILLA_INDIVIDUAL):
+            print(f"[REPORTES] ERROR: No se encontró la plantilla individual: {PLANTILLA_INDIVIDUAL}")
             flash("La plantilla de reporte individual no se encuentra en el servidor", "error")
             return redirect(url_for("panel_tutor" if g.rol == "tutor" else "panel_alumno"))
 
@@ -684,7 +696,7 @@ def descargar_ficha_tutoria_excel(id):
         )
 
     except Exception as e:
-        print(f"Error generando Excel individual: {e}")
+        print(f"[REPORTES] ERROR generando Excel individual (tutoría {id}): {type(e).__name__}: {e}")
         flash("Ocurrió un error al generar la ficha en Excel.", "error")
         return redirect(url_for("panel_tutor" if g.rol == "tutor" else "panel_alumno"))
 
@@ -692,7 +704,8 @@ def descargar_ficha_tutoria_excel(id):
 @requiere_rol("tutor", "coordinador")
 def reporte_general_excel():
     try:
-        if not os.path.exists(PLANTILLA_GENERAL):
+        if not os.path.isfile(PLANTILLA_GENERAL):
+            print(f"[REPORTES] ERROR: No se encontró la plantilla general: {PLANTILLA_GENERAL}")
             flash("La plantilla de reporte general no existe en el servidor", "error")
             return redirect(url_for("panel_tutor" if g.rol == "tutor" else "panel_coordinador"))
 
