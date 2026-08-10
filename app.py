@@ -99,7 +99,6 @@ ALUMNOS_INICIALES = [
     ("TIC-310150", "Robles Ramírez Jorge Alexander", "silvia.castrejon"),
     ("TIC-310001", "Rubio Romero Katherine Jais", "silvia.castrejon"),
     ("TI-310142", "Vázquez Cortez Jorge Alejandro", "silvia.castrejon"),
-    
     ("TIC-310173", "Aguilar Núñez José Manuel", "silvia.castrejon"),
     ("TIC-310012", "Aranda Martínez Eimy Eileen", "silvia.castrejon"),
     ("TIC-310049", "Esparza Burgara Jesús Gabriel", "silvia.castrejon"),
@@ -124,7 +123,6 @@ ALUMNOS_INICIALES = [
     ("TIC-310137", "Topete Fregoso José Armando", "silvia.castrejon"),
     ("TIC-310156", "Velasco Sánchez Raúl Mauricio", "silvia.castrejon"),
     ("TIC-310011", "Medina Delgado Alan Emir", "silvia.castrejon"),
-    
     ("TIC-310072", "Araujo Robledo Alain Javier", "juan.tovar"),
     ("TIC-310048", "Cisneros Macías Alondra Guadalupe", "juan.tovar"),
     ("TIC-310143", "Flores Ochoa Kervin Geovanni", "juan.tovar"),
@@ -145,7 +143,6 @@ ALUMNOS_INICIALES = [
     ("TIC-310168", "Rosales García Sherlyn Vanessa", "juan.tovar"),
     ("TIC-310094", "Ruiz Mendoza Gilberto", "juan.tovar"),
     ("TIC-310102", "Topete Sánchez José Carlos", "juan.tovar"),
-    
     ("TIC-310120", "Alvarado Rodríguez Alexis Ariel", "juan.tovar"),
     ("TIC-310020", "Barajas Rosales Erick Geovanny", "juan.tovar"),
     ("TIC-310128", "García Correa Bertha Odalys", "juan.tovar"),
@@ -526,28 +523,6 @@ def reportes_tutor():
     pendientes = sum(1 for t in mis_tutorias if t.estado in ["Solicitada", "Confirmada", "Asignada por tutor"])
     return render_template("reportes_tutor.html", total=total, realizadas=realizadas, pendientes=pendientes, alumnos=mis_alumnos, tutorias=mis_tutorias)
 
-@app.route("/coordinador/actualizar-asignacion-masiva")
-@requiere_rol("coordinador")
-def actualizar_asignacion_masiva():
-    mapa_tutores = {}
-    for cred, nombre in TUTORES_INICIALES:
-        usr = Usuario.query.filter_by(credencial=cred).first()
-        if usr:
-            mapa_tutores[cred] = usr.id
-
-    actualizados = 0
-    for cred, nombre, cred_tutor in ALUMNOS_INICIALES:
-        usr = Usuario.query.filter_by(credencial=cred).first()
-        id_tutor_asignado = mapa_tutores.get(cred_tutor)
-        
-        if usr and usr.perfil_alumno:
-            usr.perfil_alumno.id_tutor = id_tutor_asignado
-            actualizados += 1
-            
-    db.session.commit()
-    flash(f"Se actualizaron {actualizados} asignaciones de tutorías correctamente.", "success")
-    return redirect(url_for("panel_coordinador"))
-
 # ===================== TUTORÍA INDIVIDUAL =====================
 @app.route("/iniciar-tutoria/<int:id>")
 @requiere_rol("tutor")
@@ -609,12 +584,46 @@ def descargar_ficha_tutoria_pdf(id):
 @app.route("/panel-coordinador")
 @requiere_rol("coordinador")
 def panel_coordinador():
-    return render_template("coordinador.html", 
-                           usuarios=Usuario.query.all(), 
-                           tutorias=Tutoria.query.all(),
-                           auditoria=Auditoria.query.order_by(Auditoria.fecha.desc()).limit(30).all(),
-                           respaldos=os.listdir(CARPETA_RESPALDOS), 
-                           cfg=ConfiguracionRespaldos.query.first())
+    return render_template(
+        "coordinador.html", 
+        usuarios=Usuario.query.all(), 
+        tutorias=Tutoria.query.all(),
+        auditoria=Auditoria.query.order_by(Auditoria.fecha.desc()).limit(30).all(),
+        respaldos=os.listdir(CARPETA_RESPALDOS), 
+        cfg=ConfiguracionRespaldos.query.first(),
+        total_tutorias=Tutoria.query.count(),
+        solicitadas=Tutoria.query.filter_by(estado="Solicitada").count(),
+        confirmadas=Tutoria.query.filter_by(estado="Confirmada").count(),
+        realizadas=Tutoria.query.filter_by(estado="Realizada").count(),
+        asignadas=Tutoria.query.filter_by(estado="Asignada por tutor").count(),
+        total_alumnos=Usuario.query.filter_by(tipo="alumno").count(),
+        total_tutores=Usuario.query.filter_by(tipo="tutor").count(),
+        total_coordinadores=Usuario.query.filter_by(tipo="coordinador").count(),
+        activos=Usuario.query.filter_by(bloqueado=False).count(),
+        bloqueados=Usuario.query.filter_by(bloqueado=True).count()
+    )
+
+@app.route("/coordinador/actualizar-asignacion-masiva")
+@requiere_rol("coordinador")
+def actualizar_asignacion_masiva():
+    mapa_tutores = {}
+    for cred, nombre in TUTORES_INICIALES:
+        usr = Usuario.query.filter_by(credencial=cred).first()
+        if usr:
+            mapa_tutores[cred] = usr.id
+
+    actualizados = 0
+    for cred, nombre, cred_tutor in ALUMNOS_INICIALES:
+        usr = Usuario.query.filter_by(credencial=cred).first()
+        id_tutor_asignado = mapa_tutores.get(cred_tutor)
+        
+        if usr and usr.perfil_alumno:
+            usr.perfil_alumno.id_tutor = id_tutor_asignado
+            actualizados += 1
+            
+    db.session.commit()
+    flash(f"Se actualizaron {actualizados} asignaciones de tutorías correctamente.", "success")
+    return redirect(url_for("panel_coordinador"))
 
 @app.route("/reportes")
 @requiere_rol("coordinador")
