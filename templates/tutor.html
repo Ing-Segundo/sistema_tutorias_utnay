@@ -402,7 +402,7 @@
                                                     </a>
                                                 {% endif %}
 
-                                                {% if t.estado in ['Asignada por el tutor', 'Asignada por tutor', 'En proceso', 'Realizada'] %}
+                                                {% if t.estado in ['Solicitada', 'Asignada por el tutor', 'Asignada por tutor', 'En proceso', 'Realizada'] %}
                                                     <a href="{{ url_for('ver_tutoria_individual', id=t.id) }}" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/20" title="Ver HTML">
                                                         <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                                                         <span>Ficha</span>
