@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light" class="h-full scroll-smooth bg-[#EAF2ED]">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inicio de Sesión · Sistema de Tutorías</title>
+
+    <!-- Preconnect & Typography Optimization -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <!-- Tailwind CSS & DaisyUI CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+    <!-- Tailwind Custom Configuration -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#0E7C70',
+                            600: '#0B6359',
+                            700: '#084b43',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --brand-primary: #0E7C70;
+            --brand-primary-hover: #0B6359;
+            --brand-accent: #15803D;
+            --bg-canvas: #EAF2ED;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text-primary: #0F172A;
+            --text-secondary: #475569;
+            --text-muted: #94A3B8;
+            --border-subtle: #E2E8F0;
+            --shadow-elevation: 0 20px 40px -15px rgba(14, 124, 112, 0.08), 0 0 1px 1px rgba(0, 0, 0, 0.03);
+            --transition-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-canvas: #090D16;
+                --card-bg: rgba(15, 23, 42, 0.85);
+                --text-primary: #F8FAFC;
+                --text-secondary: #94A3B8;
+                --text-muted: #64748B;
+                --border-subtle: #1E293B;
+                --shadow-elevation: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            }
+        }
+
+        /* Capa con textura de manchas de alumno.html */
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-canvas);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("{% if url_for is defined %}{{ url_for('static', filename='img/manchas.jpeg') }}{% else %}/assets/img/manchas.jpeg{% endif %}");
+            background-repeat: repeat;
+            background-size: 380px auto;
+            opacity: 0.35;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Glassmorphism & Enterprise Surface Elevation */
+        .glass-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-subtle);
+            box-shadow: var(--shadow-elevation);
+        }
+
+        /* Hero Canvas Mesh Background */
+        .mesh-gradient-bg {
+            background-color: #052e2b;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(14, 124, 112, 0.8) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(21, 128, 61, 0.6) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(11, 99, 89, 0.5) 0px, transparent 50%);
+        }
+
+        /* Precision Focus State Management */
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background-color: rgba(248, 250, 252, 0.6);
+            border: 1.5px solid var(--border-subtle);
+            border-radius: 0.75rem;
+            transition: all 0.2s var(--transition-smooth);
+        }
+
+        .dark .input-wrapper {
+            background-color: rgba(15, 23, 42, 0.6);
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--brand-primary);
+            background-color: transparent;
+            box-shadow: 0 0 0 4px rgba(14, 124, 112, 0.15);
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            padding: 0.875rem 1rem 0.875rem 2.875rem;
+            font-size: 0.9375rem;
+            color: #0F172A !important;
+            -webkit-text-fill-color: #0F172A !important;
+            font-weight: 500;
+            opacity: 1 !important;
+        }
+        
+        .dark .input-wrapper input {
+            color: #F8FAFC !important;
+            -webkit-text-fill-color: #F8FAFC !important;
+        }
+        
+        .input-wrapper input::placeholder {
+            color: var(--text-muted);
+        }
+        
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+            -webkit-text-fill-color: #0F172A !important;
+            transition: background-color 9999s ease-in-out 0s;
+        }
+        
+        .dark input:-webkit-autofill,
+        .dark input:-webkit-autofill:hover,
+        .dark input:-webkit-autofill:focus,
+        .dark input:-webkit-autofill:active {
+            -webkit-text-fill-color: #F8FAFC !important;
+        }
+
+        /* Interactive Elements Motion Design */
+        .btn-brand-primary {
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-hover));
+            transition: all 0.25s var(--transition-smooth);
+            box-shadow: 0 4px 14px 0 rgba(14, 124, 112, 0.3);
+        }
+
+        .btn-brand-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 22px 0 rgba(14, 124, 112, 0.4);
+            filter: brightness(1.05);
+        }
+
+        .btn-brand-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px 0 rgba(14, 124, 112, 0.25);
+        }
+
+        /* Subtle Ambient Glow Effect */
+        .brand-icon-glow {
+            box-shadow: 0 10px 30px -5px rgba(14, 124, 112, 0.4);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-0 lg:p-6 selection:bg-teal-500 selection:text-white relative">
+
+    <div class="w-full max-w-6xl min-h-screen lg:min-h-[680px] grid grid-cols-1 lg:grid-cols-12 glass-panel lg:rounded-3xl overflow-hidden relative z-10">
+        
+        <!-- VISUAL HERO PANEL (DESKTOP / TABLET LARGE) -->
+        <div class="hidden lg:flex lg:col-span-6 mesh-gradient-bg p-12 flex-col justify-between relative overflow-hidden">
+            <!-- Background Decorative Grid Overlay -->
+            <div class="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
+            
+            <div class="relative z-10 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
+                    <i class="fas fa-graduation-cap text-white text-lg"></i>
+                </div>
+                <span class="text-white font-semibold tracking-wide text-sm uppercase">UT Nayarit</span>
+            </div>
+
+            <div class="relative z-10 my-auto space-y-4 max-w-md">
+                <h2 class="text-4xl font-extrabold text-white leading-tight tracking-tight">
+                    Plataforma Institucional de Tutorías.
+                </h2>
+                <p class="text-teal-100/80 text-sm leading-relaxed font-normal">
+                    Gestión académica integral, seguimiento de estudiantes y acompañamiento psicopedagógico en una única interfaz unificada.
+                </p>
+            </div>
+
+            <div class="relative z-10 flex items-center justify-between pt-6 border-t border-white/10 text-xs text-teal-200/60">
+                <span>© Universidad Tecnológica de Nayarit</span>
+                <span class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Sistemas Operativos
+                </span>
+            </div>
+        </div>
+
+        <!-- FORMULARIO DE ACCESO PANEL -->
+        <div class="col-span-1 lg:col-span-6 p-6 sm:p-12 md:p-16 flex flex-col justify-between bg-white dark:bg-slate-900/50">
+            
+            <div class="w-full max-w-md mx-auto my-auto">
+                
+                <!-- BRAND HEADER -->
+                <div class="text-center mb-8">
+                    <div class="brand-logo-container brand-icon-glow w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#0E7C70] to-[#15803D] flex items-center justify-center mx-auto mb-4 text-white">
+                        <i class="fas fa-graduation-cap text-2xl"></i>
+                    </div>
+                    <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                        Sistema de Tutorías
+                    </h1>
+                    <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1.5">
+                        Universidad Tecnológica de Nayarit
+                    </p>
+                </div>
+
+                <!-- MENSAJE DE ERROR / FLASH (PRESERVANDO LÓGICA JINJA2) -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                  {% if messages %}
+                    {% for category, message in messages %}
+                      <div class="p-4 mb-6 rounded-xl text-sm font-medium flex items-center gap-3 border transition-all duration-200 {% if category == 'error' %}bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50 text-red-800 dark:text-red-300{% else %}bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-300{% endif %}" role="alert" aria-live="polite">
+                        <i class="fas {% if category == 'error' %}fa-circle-exclamation text-red-500 dark:text-red-400{% else %}fa-circle-check text-emerald-500 dark:text-emerald-400{% endif %} text-lg flex-shrink-0"></i>
+                        <span class="leading-tight">{{ message }}</span>
+                      </div>
+                    {% endfor %}
+                  {% endif %}
+                {% endwith %}
+
+                <!-- FORMULARIO DE ACCESO -->
+                <form method="POST" action="{{ url_for('login') }}" autocomplete="on" class="space-y-5">
+                    
+                    <!-- CAMPO CREDENCIAL -->
+                    <div class="space-y-2">
+                        <label for="credencial" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                            Credencial / Usuario
+                        </label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-id-card absolute left-3.5 text-slate-400 dark:text-slate-500 text-base pointer-events-none transition-colors duration-200"></i>
+                            <input 
+                                type="text" 
+                                id="credencial" 
+                                name="credencial" 
+                                required 
+                                placeholder="Ej. 20241010"
+                                autocomplete="username"
+                                class="text-slate-900 dark:text-slate-100 transition-all duration-200"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- CAMPO CONTRASEÑA -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label for="contrasena" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                                Contraseña
+                            </label>
+                        </div>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock absolute left-3.5 text-slate-400 dark:text-slate-500 text-base pointer-events-none transition-colors duration-200"></i>
+                            <input 
+                                type="password" 
+                                id="contrasena" 
+                                name="contrasena" 
+                                required 
+                                placeholder="••••••••••••"
+                                autocomplete="current-password"
+                                class="text-slate-900 dark:text-slate-100 transition-all duration-200"
+                            />
+                            <button 
+                                type="button" 
+                                id="togglePassword" 
+                                class="absolute right-3.5 p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 focus:outline-none focus:text-teal-600 transition-colors duration-150 rounded-lg" 
+                                aria-label="Mostrar contraseña en texto plano"
+                                aria-pressed="false"
+                                tabindex="0"
+                            >
+                                <i class="fas fa-eye text-sm" id="toggleIcon" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- BOTÓN SUBMIT -->
+                    <div class="pt-2">
+                        <button class="btn-brand-primary w-full text-white font-semibold text-sm py-3.5 px-6 rounded-xl flex items-center justify-center gap-2.5 focus:outline-none focus:ring-4 focus:ring-teal-500/30" type="submit">
+                            <i class="fas fa-arrow-right-to-bracket text-base"></i>
+                            <span>Iniciar Sesión</span>
+                        </button>
+                    </div>
+
+                </form>
+
+                <!-- FOOTER LEGAL -->
+                <footer class="mt-10 pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
+                    <p class="text-xs text-slate-400 dark:text-slate-500 font-medium">
+                        Sistema Integral de Tutorías
+                    </p>
+                    <p class="text-xs font-bold text-[#0E7C70] dark:text-teal-400 mt-1">
+                        Universidad Tecnológica de Nayarit
+                    </p>
+                </footer>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ACCESSIBLE & PERFORMANCE-ORIENTED SCRIPT -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const togglePasswordBtn = document.getElementById('togglePassword');
+            const passwordInput = document.getElementById('contrasena');
+            const toggleIcon = document.getElementById('toggleIcon');
+
+            if (togglePasswordBtn && passwordInput && toggleIcon) {
+                togglePasswordBtn.addEventListener('click', () => {
+                    const isPassword = passwordInput.getAttribute('type') === 'password';
+                    const targetType = isPassword ? 'text' : 'password';
+                    
+                    passwordInput.setAttribute('type', targetType);
+                    togglePasswordBtn.setAttribute('aria-pressed', isPassword ? 'true' : 'false');
+                    togglePasswordBtn.setAttribute('aria-label', isPassword ? 'Ocultar contraseña' : 'Mostrar contraseña en texto plano');
+                    
+                    toggleIcon.classList.toggle('fa-eye', !isPassword);
+                    toggleIcon.classList.toggle('fa-eye-slash', isPassword);
+                });
+            }
+        });
+    </script>
+
+</body>
+</html>

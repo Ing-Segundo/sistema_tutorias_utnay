@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-[#EAF2ED]">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reportes Generales · Sistema de Tutorías</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#F0FFF0',
+                            100: '#E1EFE6',
+                            200: '#C2DFCD',
+                            300: '#94C7A7',
+                            400: '#228B22',
+                            500: '#1A5333',
+                            600: '#144228',
+                            700: '#0F331F',
+                            bg: '#FAF0E6',
+                        },
+                        accent: '#228B22',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'saas-card': '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)',
+                        'saas-hover': '0 8px 16px -4px rgba(26, 83, 51, 0.08), 0 4px 6px -2px rgba(0,0,0,0.02)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+
+    <style>
+        :root {
+            --brand-primary: #1A5333;
+            --brand-hover: #144228;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #EAF2ED;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("{% if url_for is defined %}{{ url_for('static', filename='img/manchas.jpeg') }}{% else %}/assets/img/manchas.jpeg{% endif %}");
+            background-repeat: repeat;
+            background-size: 380px auto;
+            opacity: 0.35;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        .animate-slide-up {
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="h-full antialiased text-slate-800 relative">
+
+<div class="drawer lg:drawer-open min-h-screen relative z-10">
+    <input id="menu-drawer" type="checkbox" class="drawer-toggle" />
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="drawer-content flex flex-col min-w-0 bg-transparent">
+
+        <!-- BARRA SUPERIOR (NAVBAR) -->
+        <header class="sticky top-0 z-30 h-16 glass-panel border-b border-slate-200/60 px-4 lg:px-8 flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-3">
+                <label for="menu-drawer" aria-label="Abrir menú de navegación" class="lg:hidden cursor-pointer p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </label>
+                
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 hidden sm:inline-block">Plataforma</span>
+                    <span class="text-slate-300 hidden sm:inline-block">/</span>
+                    <h1 class="text-sm md:text-base font-semibold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="pie-chart" class="w-4 h-4 text-[#1A5333]"></i>
+                        Reportes Generales y Analítica
+                    </h1>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-xs font-semibold text-emerald-800">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Modo Coordinador</span>
+                </div>
+
+                <a href="{% if url_for is defined %}{{ url_for('salir') }}{% else %}#{% endif %}" aria-label="Cerrar Sesión" class="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-rose-500/20">
+                    <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                    <span class="hidden sm:inline">Cerrar Sesión</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- CUERPO PRINCIPAL -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6 animate-fade-in">
+
+            <!-- BANNER EXPLICATIVO -->
+            <section class="bg-white rounded-2xl border border-slate-200/80 shadow-saas-card p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-slide-up">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <span class="px-2.5 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider bg-emerald-100 text-[#1A5333]">Indicadores Clave (KPIs)</span>
+                        <span class="text-xs text-slate-400">• Sistema Institucional</span>
+                    </div>
+                    <h2 class="text-lg font-bold text-slate-800">Resumen Estadístico de Tutorías y Usuarios</h2>
+                    <p class="text-xs sm:text-sm text-slate-500 max-w-3xl">
+                        Métricas en tiempo real para evaluar la eficiencia en la atención de alumnos, distribución de carga académica de tutores y efectividad operacional del programa de tutorías.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                    <a href="{% if url_for is defined %}{{ url_for('reporte_general_pdf') }}{% else %}#{% endif %}" class="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-white bg-[#1A5333] hover:bg-[#144228] border border-emerald-800 rounded-xl transition-all shadow-sm hover:shadow-md active:scale-95">
+                        <i data-lucide="file-down" class="w-4 h-4"></i>
+                        <span>Exportar Informe PDF</span>
+                    </a>
+                </div>
+            </section>
+
+            <!-- GRID PRINCIPAL -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                <!-- MÓDULO 1: GESTIÓN DE TUTORÍAS -->
+                <section class="space-y-4 flex flex-col">
+                    <div class="flex items-center justify-between bg-white/80 backdrop-blur p-4 rounded-xl border border-slate-200/80 shadow-sm">
+                        <div class="flex items-center gap-2.5">
+                            <div class="p-2 rounded-lg bg-emerald-50 text-[#1A5333] border border-emerald-100">
+                                <i data-lucide="calendar-check" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-semibold text-slate-800">Gestión de Tutorías</h2>
+                                <p class="text-xs text-slate-500">Distribución por estado operacional</p>
+                            </div>
+                        </div>
+                        <span class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg border border-slate-200">
+                            Total: {{ total_tutorias if total_tutorias is defined else 0 }}
+                        </span>
+                    </div>
+
+                    <!-- Tarjetas de Métricas -->
+                    <div class="grid grid-cols-2 sm:grid-cols-2 gap-3">
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-saas-card hover:shadow-saas-hover transition-all">
+                            <div class="flex items-center justify-between text-slate-400 mb-2">
+                                <span class="text-[11px] font-bold uppercase tracking-wider">Total</span>
+                                <i data-lucide="layers" class="w-4 h-4 text-[#1A5333]"></i>
+                            </div>
+                            <p class="text-2xl font-bold text-slate-800">{{ total_tutorias if total_tutorias is defined else 0 }}</p>
+                            <span class="text-[10px] text-slate-400 block mt-1">Sesiones registradas</span>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-saas-card hover:shadow-saas-hover transition-all">
+                            <div class="flex items-center justify-between text-amber-500 mb-2">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Solicitadas</span>
+                                <i data-lucide="clock" class="w-4 h-4"></i>
+                            </div>
+                            <p class="text-2xl font-bold text-amber-500">{{ solicitadas if solicitadas is defined else 0 }}</p>
+                            <span class="text-[10px] text-amber-700/70 font-medium block mt-1">Pendientes de atención</span>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-saas-card hover:shadow-saas-hover transition-all">
+                            <div class="flex items-center justify-between text-sky-500 mb-2">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Asignadas</span>
+                                <i data-lucide="user-check" class="w-4 h-4"></i>
+                            </div>
+                            <p class="text-2xl font-bold text-sky-500">{{ asignadas if asignadas is defined else 0 }}</p>
+                            <span class="text-[10px] text-sky-700/70 font-medium block mt-1">Tutor designado</span>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-saas-card hover:shadow-saas-hover transition-all">
+                            <div class="flex items-center justify-between text-emerald-600 mb-2">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Realizadas Éxito</span>
+                                <i data-lucide="check-check" class="w-4 h-4"></i>
+                            </div>
+                            <div class="flex items-baseline gap-2">
+                                <p class="text-2xl font-bold text-emerald-600">{{ realizadas if realizadas is defined else 0 }}</p>
+                                <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                    Concluidas
+                                </span>
+                            </div>
+                            <span class="text-[10px] text-slate-400 block mt-1">Con minuta guardada</span>
+                        </div>
+                    </div>
+
+                    <!-- Gráfica de Barras -->
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-saas-card p-5 flex-1 flex flex-col justify-between space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Estado Operacional de Sesiones</h3>
+                            <span class="text-[11px] text-slate-500 flex items-center gap-1">
+                                <i data-lucide="activity" class="w-3.5 h-3.5 text-emerald-600"></i> En tiempo real
+                            </span>
+                        </div>
+                        
+                        <div class="relative w-full h-64">
+                            <canvas id="graficaTutorias"></canvas>
+                        </div>
+
+                        <div class="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200/80 text-xs text-slate-600 flex items-start gap-3">
+                            <i data-lucide="info" class="w-4 h-4 text-[#1A5333] shrink-0 mt-0.5"></i>
+                            <p class="leading-relaxed">
+                                <strong>Utilidad pedagógica:</strong> Permite identificar cuellos de botella entre solicitudes y asignaciones.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- MÓDULO 2: GESTIÓN DE USUARIOS -->
+                <section class="space-y-4 flex flex-col">
+                    <div class="flex items-center justify-between bg-white/80 backdrop-blur p-4 rounded-xl border border-slate-200/80 shadow-sm">
+                        <div class="flex items-center gap-2.5">
+                            <div class="p-2 rounded-lg bg-emerald-50 text-[#1A5333] border border-emerald-100">
+                                <i data-lucide="users" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-semibold text-slate-800">Gestión de Usuarios</h2>
+                                <p class="text-xs text-slate-500">Composición y estado de cuentas</p>
+                            </div>
+                        </div>
+                        <span class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg border border-slate-200">
+                            Planta Académica
+                        </span>
+                    </div>
+
+                    <!-- Tarjetas de Métricas -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-saas-card hover:shadow-saas-hover transition-all">
+                            <div class="flex items-center justify-between text-blue-600 mb-2">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Alumnos</span>
+                                <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+                            </div>
+                            <p class="text-2xl font-bold text-blue-600">{{ total_alumnos if total_alumnos is defined else 0 }}</p>
+                            <span class="text-[10px] text-slate-400 block mt-1">Matrícula inscrita</span>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-saas-card hover:shadow-saas-hover transition-all">
+                            <div class="flex items-center justify-between text-emerald-600 mb-2">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Tutores</span>
+                                <i data-lucide="book-open" class="w-4 h-4"></i>
+                            </div>
+                            <p class="text-2xl font-bold text-emerald-600">{{ total_tutores if total_tutores is defined else 0 }}</p>
+                            <span class="text-[10px] text-slate-400 block mt-1">Docentes asignados</span>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-saas-card hover:shadow-saas-hover transition-all">
+                            <div class="flex items-center justify-between text-purple-600 mb-2">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Coordinadores</span>
+                                <i data-lucide="shield-check" class="w-4 h-4"></i>
+                            </div>
+                            <p class="text-2xl font-bold text-purple-600">{{ total_coordinadores if total_coordinadores is defined else 0 }}</p>
+                            <span class="text-[10px] text-slate-400 block mt-1">Administración</span>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-saas-card hover:shadow-saas-hover transition-all">
+                            <div class="flex items-center justify-between text-teal-600 mb-2">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Activos</span>
+                                <i data-lucide="user-check" class="w-4 h-4"></i>
+                            </div>
+                            <p class="text-2xl font-bold text-teal-600">{{ activos if activos is defined else 0 }}</p>
+                            <span class="text-[10px] text-teal-700/70 font-medium block mt-1">Acceso habilitado</span>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-saas-card hover:shadow-saas-hover transition-all col-span-2 sm:col-span-2">
+                            <div class="flex items-center justify-between text-rose-500 mb-2">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Bloqueados / Inactivos</span>
+                                <i data-lucide="user-x" class="w-4 h-4"></i>
+                            </div>
+                            <div class="flex items-baseline gap-2">
+                                <p class="text-2xl font-bold text-rose-600">{{ bloqueados if bloqueados is defined else 0 }}</p>
+                                <span class="text-xs font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                                    Restringidos
+                                </span>
+                            </div>
+                            <span class="text-[10px] text-slate-400 block mt-1">Requieren revisión académica</span>
+                        </div>
+                    </div>
+
+                    <!-- Gráfica de Usuarios (Ajustada con minAngle) -->
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-saas-card p-5 flex-1 flex flex-col justify-between space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Distribución Proporcional de Roles</h3>
+                            <span class="text-[11px] text-slate-500 flex items-center gap-1">
+                                <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-emerald-600"></i> Composición
+                            </span>
+                        </div>
+                        
+                        <div class="relative w-full h-64 flex items-center justify-center">
+                            <canvas id="graficaUsuarios"></canvas>
+                        </div>
+
+                        <div class="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200/80 text-xs text-slate-600 flex items-start gap-3">
+                            <i data-lucide="help-circle" class="w-4 h-4 text-[#1A5333] shrink-0 mt-0.5"></i>
+                            <p class="leading-relaxed">
+                                <strong>¿Para qué sirve?</strong> Permite supervisar la distribución del personal docente respecto a la masa estudiantil.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- SECCIÓN RESUMEN EJECUTIVO -->
+            <section class="bg-white rounded-2xl border border-slate-200/80 shadow-saas-card p-6 space-y-4">
+                <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <i data-lucide="award" class="w-5 h-5 text-[#1A5333]"></i>
+                    <h2 class="text-base font-semibold text-slate-800">Conclusiones de la Evaluación Institucional</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-600">
+                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+                        <span class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                            <i data-lucide="trending-up" class="w-4 h-4 text-emerald-600"></i>
+                            Cobertura de Tutorías
+                        </span>
+                        <p class="leading-relaxed">El programa mantiene una tasa de efectividad alta. El seguimiento continuo previene la deserción en materias críticas.</p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+                        <span class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                            <i data-lucide="users" class="w-4 h-4 text-blue-600"></i>
+                            Distribución Tutor/Alumno
+                        </span>
+                        <p class="leading-relaxed">El promedio actual de atención permite cumplimiento estricto del plan reticular sin saturar los horarios lectivos.</p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+                        <span class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                            <i data-lucide="check-circle" class="w-4 h-4 text-[#1A5333]"></i>
+                            Validez de Datos
+                        </span>
+                        <p class="leading-relaxed">Toda la información reportada es auditada mediante la base de datos centralizada de la universidad.</p>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="drawer-side z-50">
+        <label for="menu-drawer" aria-label="Cerrar menú de navegación" class="drawer-overlay bg-slate-900/30"></label>
+        <aside class="bg-[#1A5333] text-white w-72 h-full flex flex-col justify-between p-4 shadow-xl">
+            <div class="space-y-6">
+                <div class="flex items-center gap-3 px-3 py-2 border-b border-emerald-700/50 pb-4">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-600/50 border border-emerald-400/30 flex items-center justify-center text-white shrink-0">
+                        <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-base font-bold tracking-tight leading-none text-white">Tutorías UT</span>
+                        <span class="text-[10px] font-semibold text-emerald-200 tracking-wider uppercase mt-1">Panel de Control</span>
+                    </div>
+                </div>
+
+                <nav class="space-y-1">
+                    <span class="px-3 text-[10px] font-bold uppercase tracking-wider text-emerald-200/60 block mb-2">Navegación</span>
+                    <a href="{% if url_for is defined %}{{ url_for('panel_coordinador') }}{% else %}#{% endif %}" class="relative flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-emerald-100 hover:bg-emerald-800/40 hover:text-white transition-all group">
+                        <i data-lucide="home" class="w-4 h-4 text-emerald-300/70 group-hover:text-emerald-200 transition-colors"></i>
+                        <span>Inicio</span>
+                    </a>
+                    <a href="{% if url_for is defined %}{{ url_for('reportes') }}{% else %}#{% endif %}" class="relative flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all group bg-emerald-800/60 text-white border border-emerald-600/40">
+                        <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-300"></i>
+                        <span>Estadísticas Generales</span>
+                    </a>
+                </nav>
+            </div>
+
+            <div class="pt-4 border-t border-emerald-700/50 space-y-3">
+                <div class="p-3 rounded-xl bg-emerald-800/40 border border-emerald-600/30 flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-emerald-100 text-[#1A5333] flex items-center justify-center font-bold text-xs shrink-0">
+                        C
+                    </div>
+                    <div class="flex flex-col min-w-0">
+                        <span class="text-xs font-semibold text-white truncate">Coordinador General</span>
+                        <span class="text-[10px] text-emerald-200/80 truncate">Universidad Tecnológica</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-1.5 px-2 text-[11px] text-emerald-200/80">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-300"></i>
+                    <span>Acceso Administrativo Seguro</span>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+</div>
+
+<!-- SCRIPT DE CHART.JS -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+
+        Chart.defaults.font.family = "'Inter', system-ui, -apple-system, sans-serif";
+        Chart.defaults.color = '#64748B';
+
+        const numSolicitadas = {{ solicitadas if solicitadas is defined else 0 }};
+        const numAsignadas = {{ asignadas if asignadas is defined else 0 }};
+        const numRealizadas = {{ realizadas if realizadas is defined else 0 }};
+
+        const numAlumnos = {{ total_alumnos if total_alumnos is defined else 0 }};
+        const numTutores = {{ total_tutores if total_tutores is defined else 0 }};
+        const numCoordinadores = {{ total_coordinadores if total_coordinadores is defined else 0 }};
+
+        // 1. Gráfica de Tutorías (Barras - Sin 'Confirmadas')
+        const ctx1 = document.getElementById('graficaTutorias');
+        if (ctx1) {
+            new Chart(ctx1.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Solicitadas', 'Asignadas', 'Realizadas'],
+                    datasets: [{
+                        label: 'Número de Tutorías',
+                        data: [numSolicitadas, numAsignadas, numRealizadas],
+                        backgroundColor: [
+                            '#F59E0B',
+                            '#0EA5E9',
+                            '#10B981'
+                        ],
+                        hoverBackgroundColor: [
+                            '#D97706',
+                            '#0284C7',
+                            '#059669'
+                        ],
+                        borderRadius: 10,
+                        borderSkipped: false,
+                        maxBarThickness: 48
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 1200,
+                        easing: 'easeOutQuart'
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#0F172A',
+                            titleFont: { size: 12, weight: '600' },
+                            bodyFont: { size: 12 },
+                            padding: 12,
+                            cornerRadius: 8,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return ` Total: ${context.parsed.y} sesiones`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0, font: { size: 11 } },
+                            grid: { color: '#F1F5F9' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 11, weight: '600' } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 2. Gráfica de Usuarios (Con minAngle para visibilidad de valores reducidos)
+        const ctx2 = document.getElementById('graficaUsuarios');
+        if (ctx2) {
+            new Chart(ctx2.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Alumnos', 'Tutores', 'Coordinadores'],
+                    datasets: [{
+                        data: [numAlumnos, numTutores, numCoordinadores],
+                        backgroundColor: [
+                            '#2563EB', // Azul
+                            '#10B981', // Verde Esmeralda 
+                            '#8B5CF6'  // Púrpura
+                        ],
+                        hoverBackgroundColor: [
+                            '#1D4ED8',
+                            '#059669',
+                            '#6D28D9'
+                        ],
+                        borderWidth: 3,
+                        borderColor: '#FFFFFF',
+                        spacing: 4,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    // Asigna un ángulo mínimo a cada segmento para dar volumen a datos bajos (p. ej. 1 usuario)
+                    minAngle: 15,
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true,
+                        duration: 1200
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 18,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: { size: 11, weight: '600' }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#0F172A',
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    let value = context.parsed || 0;
+                                    let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    let percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                    return ` ${context.label}: ${value} usuario(s) (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
+</script>
+</body>
+</html>

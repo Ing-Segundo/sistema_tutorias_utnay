@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Tutoría - Sistema de Tutorías</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --verde-ut: #0E7C70;
+            --verde-sec: #15803D;
+            --verde-suave: #E6F7F5;
+            --verde-claro: #F0FDF4;
+            --texto-principal: #1E293B;
+            --texto-sec: #64748B;
+            --borde-suave: #CCEBE8;
+            --sombra-suave: 0 8px 24px rgba(14, 124, 112, 0.12);
+        }
+        * { font-family: 'Inter', sans-serif; color: var(--texto-principal); }
+        body { background: linear-gradient(135deg, var(--verde-claro) 0%, var(--verde-suave) 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+        .card { background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); border-radius: 20px; border: 1px solid var(--borde-suave); box-shadow: var(--sombra-suave); width: 100%; max-width: 450px; padding: 2rem; }
+        .titulo { color: var(--verde-ut); font-weight: 700; text-align: center; margin-bottom: 1.5rem; }
+        .input, .select, .textarea { background: var(--verde-claro); border: 1px solid var(--borde-suave); border-radius: 12px; transition: all 0.25s ease; width: 100%; padding: 0.75rem; }
+        .input:focus, .select:focus, .textarea:focus { border-color: var(--verde-ut); box-shadow: 0 0 0 3px rgba(14, 124, 112, 0.12); background: white; }
+        .label { color: var(--texto-sec); font-weight: 500; margin-bottom: 0.5rem; display: block; }
+        .btn-ut { background: var(--verde-ut); color: white; border-radius: 12px; font-weight: 500; transition: all 0.25s ease; }
+        .btn-ut:hover { background: var(--verde-sec); transform: translateY(-1px); }
+        .btn-sec { background: var(--verde-suave); color: var(--verde-ut); border-radius: 12px; font-weight: 500; transition: all 0.25s ease; }
+        .btn-sec:hover { background: var(--verde-claro); }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2 class="titulo">Editar / Confirmar Tutoría</h2>
+        <form method="POST">
+            <div class="mb-4">
+                <label class="label">Fecha</label>
+                <input type="date" name="fecha" class="input" value="{{tutoria.fecha.strftime('%Y-%m-%d')}}" required>
+            </div>
+            <div class="mb-4">
+                <label class="label">Tema</label>
+                <input type="text" name="tema" class="input" value="{{tutoria.tema}}" required>
+            </div>
+            <div class="mb-4">
+                <label class="label">Estado</label>
+                <select name="estado" class="select">
+                    <option value="Solicitada" {% if tutoria.estado=='Solicitada' %}selected{% endif %}>Solicitada</option>
+                    <option value="Confirmada" {% if tutoria.estado=='Confirmada' %}selected{% endif %}>Confirmada</option>
+                    <option value="Realizada" {% if tutoria.estado=='Realizada' %}selected{% endif %}>Realizada</option>
+                </select>
+            </div>
+            <div class="mb-6">
+                <label class="label">Observaciones</label>
+                <textarea name="observaciones" class="textarea" rows="3">{{tutoria.observaciones}}</textarea>
+            </div>
+            <div class="flex gap-3">
+                <button type="submit" class="btn btn-ut flex-1">Guardar Cambios</button>
+                <a href="{{url_for('panel_tutor')}}" class="btn btn-sec flex-1 text-center">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutoría Individual - Sistema de Tutorías</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- DaisyUI CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <!-- Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#0E7C70',
+                            600: '#0B6359',
+                            700: '#084b43',
+                            800: '#052e2b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --brand-primary: #0E7C70;
+            --brand-primary-hover: #0B6359;
+            --brand-accent: #15803D;
+        }
+
+        /* Estilo base y textura heredada del panel de alumno */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #EAF2ED;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("{% if url_for is defined %}{{ url_for('static', filename='img/manchas.jpeg') }}{% else %}/assets/img/manchas.jpeg{% endif %}");
+            background-repeat: repeat;
+            background-size: 380px auto;
+            opacity: 0.35;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Degradado Mesh y Grid de Login.html */
+        .mesh-gradient-header {
+            background-color: #052e2b;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(14, 124, 112, 0.9) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(21, 128, 61, 0.7) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(11, 99, 89, 0.6) 0px, transparent 50%);
+        }
+
+        /* Panel traslúcido suave */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        /* Animación suave de entrada al abrir la página */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in-up {
+            animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Transiciones de inputs al enfocarse */
+        .custom-input {
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .custom-input:focus {
+            border-color: #0E7C70;
+            box-shadow: 0 0 0 3px rgba(14, 124, 112, 0.15);
+        }
+    </style>
+</head>
+<body class="min-h-screen antialiased text-slate-800 py-6 px-4 sm:px-6 lg:px-8 relative z-10">
+
+    <div class="max-w-4xl mx-auto space-y-6 animate-fade-in-up">
+        
+        <!-- Navegación Superior -->
+        <div class="flex items-center justify-between glass-card px-5 py-3 rounded-2xl border border-slate-200/80 shadow-sm">
+            <a href="javascript:history.back()" class="inline-flex items-center gap-2 text-sm font-semibold text-brand-600 hover:text-brand-800 transition-colors duration-200 rounded-lg px-2 py-1">
+                <i class="fas fa-arrow-left text-xs"></i>
+                Volver
+            </a>
+            
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/80">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    {{ tutoria.estado or 'En proceso' }}
+                </span>
+            </div>
+        </div>
+
+        <!-- Alertas de Flash Mensajes -->
+        {% with mensajes = get_flashed_messages(with_categories=true) %}
+            {% if mensajes %}
+                {% set categoria, texto = mensajes[0] %}
+                <div role="alert" class="alert alert-{{ categoria }} shadow-sm border border-slate-200 rounded-2xl bg-white/95 text-slate-800 flex items-center gap-3 p-4">
+                    <i class="fas fa-circle-info text-brand-600 text-lg shrink-0"></i>
+                    <span class="text-sm font-medium">{{ texto }}</span>
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% set en_proceso = tutoria.estado == 'En proceso' %}
+        {% set deshabilitado = '' if en_proceso else 'disabled' %}
+        {% set deshabilitar_observaciones = '' if (en_proceso and session.get('rol') == 'tutor') else 'disabled' %}
+        {% set puede_guardar = session.get('rol') == 'tutor' and en_proceso %}
+
+        <!-- Formulario Contenedor Principal -->
+        <form class="glass-card rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden divide-y divide-slate-100/80" method="POST" action="{{ url_for('ver_tutoria_individual', id=tutoria.id) }}">
+            
+            <!-- Encabezado Institucional con Mesh & Grid Decorativo (Estilo Login) -->
+            <div class="p-6 sm:p-8 mesh-gradient-header text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
+                <!-- Capa de Cuadrícula Visual -->
+                <div class="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none"></div>
+
+                <div class="relative z-10 flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shrink-0 shadow-inner">
+                        <i class="fas fa-user-graduate text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-teal-200">Universidad Tecnológica de Nayarit</span>
+                        <h1 class="text-lg sm:text-xl font-extrabold tracking-tight text-white mt-0.5">Control y Seguimiento de Tutorías Individuales</h1>
+                    </div>
+                </div>
+
+                <div class="relative z-10 text-left sm:text-right border-t sm:border-t-0 border-white/10 pt-3 sm:pt-0">
+                    <span class="text-xs text-teal-200/70 block uppercase tracking-wider font-semibold">Folio de Registro</span>
+                    <span class="text-base font-mono font-bold text-white bg-white/10 px-3 py-1 rounded-lg border border-white/15 inline-block mt-0.5">#{{ tutoria.id }}</span>
+                </div>
+            </div>
+
+            <!-- Sección 1: Información General -->
+            <div class="p-6 sm:p-8 space-y-6">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-address-card text-brand-500"></i>
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Información General</h2>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div class="md:col-span-2 space-y-1.5">
+                        <label for="input-carrera" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Carrera</label>
+                        <input id="input-carrera" type="text" name="carrera" class="custom-input w-full px-4 py-2.5 bg-slate-50/80 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none disabled:opacity-75 disabled:bg-slate-100" value="{{ tutoria.carrera or '' }}" {{deshabilitado}}>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="input-grupo" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Grupo</label>
+                        <input id="input-grupo" type="text" name="grupo" class="custom-input w-full px-4 py-2.5 bg-slate-50/80 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none disabled:opacity-75 disabled:bg-slate-100" value="{{ tutoria.grupo or '' }}" {{deshabilitado}}>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+                    <div class="md:col-span-4 space-y-1.5">
+                        <label for="input-alumno" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Alumno</label>
+                        <input id="input-alumno" type="text" class="w-full px-4 py-2.5 bg-slate-100/90 border border-slate-200 rounded-xl text-sm text-slate-700 cursor-not-allowed font-semibold" value="{{ tutoria.alumno.usuario.nombre_completo }}" readonly>
+                    </div>
+
+                    <div class="space-y-1.5 md:col-span-2">
+                        <label for="input-fecha" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Fecha</label>
+                        <input id="input-fecha" type="date" class="w-full px-4 py-2.5 bg-slate-100/90 border border-slate-200 rounded-xl text-sm text-slate-700 cursor-not-allowed font-semibold" value="{{ tutoria.fecha.strftime('%Y-%m-%d') }}" readonly>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="input-hr-inicio" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Hora Inicio</label>
+                        <input id="input-hr-inicio" type="time" name="hr_inicio" class="custom-input w-full px-4 py-2.5 bg-slate-50/80 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none disabled:opacity-75 disabled:bg-slate-100" value="{{ tutoria.hr_inicio or '' }}" {{deshabilitado}}>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="input-hr-salida" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Hora Fin</label>
+                        <input id="input-hr-salida" type="time" name="hr_salida" class="custom-input w-full px-4 py-2.5 bg-slate-50/80 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none disabled:opacity-75 disabled:bg-slate-100" value="{{ tutoria.hr_salida or '' }}" {{deshabilitado}}>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección 2: Motivos de la Tutoría -->
+            <div class="p-6 sm:p-8 space-y-4 bg-slate-50/60">
+                <fieldset class="space-y-3">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i class="fas fa-list-check text-brand-500"></i>
+                        <legend class="text-xs font-bold uppercase tracking-wider text-slate-500">Motivo de la Tutoría</legend>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {% set motivos = tutoria.motivo.split(', ') if tutoria.motivo else [] %}
+                        {% set lista_motivos = [
+                            'Reprobación', 'Ausentismo', 'Problemas económicos', 
+                            'Indisciplina', 'Falta de atención', 'Problemas familiares', 
+                            'Impuntualidad', 'Falta de compromiso', 'Rendimiento bajo', 'Otros'
+                        ] %}
+
+                        {% for item in lista_motivos %}
+                        <label class="flex items-center gap-3 p-3.5 bg-white border border-slate-200/90 rounded-2xl cursor-pointer hover:border-brand-500 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 focus-within:ring-2 focus-within:ring-brand-500">
+                            <input type="checkbox" name="motivo" value="{{ item }}" class="w-4 h-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500 accent-brand-600" {% if item in motivos %}checked{% endif %} {{deshabilitado}}>
+                            <span class="text-sm font-semibold text-slate-700 select-none">{{ item }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+            </div>
+
+            <!-- Sección 3: Observaciones y Seguimiento -->
+            <div class="p-6 sm:p-8 space-y-6">
+                <div class="space-y-2">
+                    <label for="puntos_relevantes" class="block text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-2">
+                        <i class="fas fa-align-left text-brand-500"></i>
+                        Puntos Relevantes
+                    </label>
+                    <textarea id="puntos_relevantes" name="puntos_relevantes" rows="3" class="custom-input w-full px-4 py-3 bg-slate-50/80 border border-slate-300 rounded-2xl text-sm text-slate-900 focus:outline-none disabled:opacity-75 disabled:bg-slate-100 resize-y" placeholder="Escribe aquí los puntos tratados durante la sesión..." {{deshabilitado}}>{{ tutoria.puntos_relevantes or '' }}</textarea>
+                </div>
+
+                <div class="space-y-2">
+                    <label for="compromisos" class="block text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-2">
+                        <i class="fas fa-handshake text-brand-500"></i>
+                        Compromisos y Acuerdos
+                    </label>
+                    <textarea id="compromisos" name="compromisos" rows="3" class="custom-input w-full px-4 py-3 bg-slate-50/80 border border-slate-300 rounded-2xl text-sm text-slate-900 focus:outline-none disabled:opacity-75 disabled:bg-slate-100 resize-y" placeholder="Escribe aquí los acuerdos acordados..." {{deshabilitado}}>{{ tutoria.compromisos or '' }}</textarea>
+                </div>
+
+                <div class="space-y-2">
+                    <label for="observaciones" class="block text-xs font-bold uppercase tracking-wider text-brand-600 flex items-center gap-2">
+                        <i class="fas fa-user-shield text-brand-600"></i>
+                        Observaciones Finales del Tutor
+                    </label>
+                    <textarea id="observaciones" name="observaciones" rows="3" class="custom-input w-full px-4 py-3 bg-emerald-50/40 border border-emerald-200/80 rounded-2xl text-sm text-slate-900 focus:outline-none disabled:opacity-75 disabled:bg-slate-100 resize-y" placeholder="Espacio exclusivo para las observaciones finales..." {{deshabilitar_observaciones}}>{{ tutoria.observaciones or '' }}</textarea>
+                </div>
+            </div>
+
+            <!-- Sección de Acciones -->
+            <div class="p-6 sm:p-8 bg-slate-50/80 flex items-center justify-end gap-3">
+                <button type="button" onclick="history.back()" class="px-6 py-3 text-sm font-semibold text-slate-600 bg-white border border-slate-300/80 rounded-xl hover:bg-slate-100 hover:text-slate-800 transition-all focus:outline-none focus:ring-2 focus:ring-slate-400">
+                    Volver
+                </button>
+
+                {% if tutoria.estado == 'En proceso' %}
+                    {% if session.get('rol') == 'tutor' %}
+                        <button type="submit" class="px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-brand-500 to-brand-600 rounded-xl hover:brightness-105 active:scale-[0.99] transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2">
+                            <i class="fas fa-save mr-2"></i>Guardar y Finalizar
+                        </button>
+                    {% else %}
+                        <button type="submit" class="px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-brand-500 to-brand-600 rounded-xl hover:brightness-105 active:scale-[0.99] transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2">
+                            <i class="fas fa-comment-dots mr-2"></i>Guardar mis comentarios
+                        </button>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+        </form>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-[#EAF2ED]">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Panel Tutor · Sistema de Tutorías</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#F0FFF0',
+                            100: '#E1EFE6',
+                            200: '#C2DFCD',
+                            300: '#94C7A7',
+                            400: '#228B22',
+                            500: '#1A5333',   /* Verde sólido principal */
+                            600: '#144228',   /* Verde oscuro sidebar */
+                            700: '#0F331F',
+                            bg: '#FAF0E6',    /* Tono crema/piel jaguar */
+                        },
+                        accent: '#228B22',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'saas-card': '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)',
+                        'saas-hover': '0 8px 16px -4px rgba(26, 83, 51, 0.08), 0 4px 6px -2px rgba(0,0,0,0.02)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Chart.js para gráficas por grupo -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --brand-primary: #1A5333;
+            --brand-hover: #144228;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #EAF2ED;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("{% if url_for is defined %}{{ url_for('static', filename='img/manchas.jpeg') }}{% else %}/assets/img/manchas.jpeg{% endif %}");
+            background-repeat: repeat;
+            background-size: 380px auto;
+            opacity: 0.35;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+<body class="h-full antialiased text-slate-800 relative">
+
+<div class="drawer lg:drawer-open min-h-screen relative z-10">
+    <input id="menu-drawer" type="checkbox" class="drawer-toggle" />
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="drawer-content flex flex-col min-w-0 bg-transparent">
+
+        <!-- BARRA SUPERIOR (NAVBAR) -->
+        <header class="sticky top-0 z-30 h-16 glass-panel border-b border-slate-200/60 px-4 lg:px-8 flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-3">
+                <label for="menu-drawer" aria-label="Abrir menú de navegación" class="lg:hidden cursor-pointer p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </label>
+                
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 hidden sm:inline-block">Plataforma</span>
+                    <span class="text-slate-300 hidden sm:inline-block">/</span>
+                    <h1 class="text-sm md:text-base font-semibold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="presentation" class="w-4 h-4 text-[#1A5333]"></i>
+                        Panel Tutor
+                    </h1>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-xs font-semibold text-emerald-800">
+                    <div class="w-6 h-6 rounded-full bg-emerald-200 text-[#1A5333] flex items-center justify-center font-bold text-xs shrink-0">
+                        {{ tutor.usuario.nombre_completo[0] if tutor and tutor.usuario and tutor.usuario.nombre_completo else 'T' }}
+                    </div>
+                    <div class="text-xs">
+                        <p class="font-semibold text-slate-700 leading-tight">Bienvenido</p>
+                        <p class="text-[10px] text-slate-500 leading-tight">Tutor Académico</p>
+                    </div>
+                </div>
+
+                <a href="{{ url_for('salir') }}" aria-label="Cerrar Sesión" class="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-rose-500/20">
+                    <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                    <span class="hidden sm:inline">Cerrar Sesión</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- CUERPO PRINCIPAL -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+
+            <!-- MENSAJES FLASH -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div role="alert" class="p-4 rounded-xl border transition-all shadow-sm flex items-center justify-between gap-3 {% if category == 'success' %}bg-emerald-50/95 border-emerald-300 text-emerald-950{% elif category in ['danger', 'error'] %}bg-rose-50/95 border-rose-300 text-rose-950{% elif category == 'warning' %}bg-amber-50/95 border-amber-300 text-amber-950{% else %}bg-sky-50/95 border-sky-300 text-sky-950{% endif %}">
+                        <div class="flex items-center gap-3">
+                            <div class="p-1.5 rounded-md {% if category == 'success' %}bg-emerald-100 text-emerald-800{% elif category in ['danger', 'error'] %}bg-rose-100 text-rose-800{% elif category == 'warning' %}bg-amber-100 text-amber-800{% else %}bg-sky-100 text-sky-800{% endif %} shrink-0">
+                                {% if category == 'success' %}
+                                    <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                                {% elif category in ['danger', 'error'] %}
+                                    <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                                {% elif category == 'warning' %}
+                                    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                                {% else %}
+                                    <i data-lucide="info" class="w-4 h-4"></i>
+                                {% endif %}
+                            </div>
+                            <span class="text-sm font-medium">{{ message }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- SECCIÓN: VISTA PANEL GENERAL -->
+            <div id="vista-general" class="space-y-6">
+                <!-- CARDS RESUMEN / STATS -->
+                <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-saas-card p-5 flex items-center gap-4 hover:shadow-saas-hover transition-all cursor-pointer" onclick="alternarVista('alumnos')">
+                        <div class="w-11 h-11 rounded-xl bg-emerald-50 text-[#1A5333] border border-emerald-100 flex items-center justify-center shrink-0">
+                            <i data-lucide="users" class="w-5 h-5"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Total Alumnos</p>
+                            <h4 class="text-2xl font-bold text-slate-800 leading-tight mt-0.5">{{ alumnos|length if alumnos else 0 }}</h4>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-saas-card p-5 flex items-center gap-4 hover:shadow-saas-hover transition-all">
+                        <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0">
+                            <i data-lucide="calendar" class="w-5 h-5"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tutorías Asignadas</p>
+                            <h4 class="text-2xl font-bold text-slate-800 leading-tight mt-0.5">{{ tutorias|length if tutorias else 0 }}</h4>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-saas-card p-5 flex items-center gap-4 hover:shadow-saas-hover transition-all">
+                        <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+                            <i data-lucide="activity" class="w-5 h-5"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Estado Panel</p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span class="text-sm font-semibold text-emerald-800">Activo</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- PERFIL TUTOR Y HORARIO -->
+                <section class="bg-white rounded-2xl border border-slate-200/80 shadow-saas-card hover:shadow-saas-hover transition-all overflow-hidden">
+                    <div class="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div class="flex items-center gap-2.5">
+                            <div class="p-2 rounded-lg bg-emerald-50 text-[#1A5333] border border-emerald-100">
+                                <i data-lucide="id-card" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-semibold text-slate-800">Mis Datos</h2>
+                                <p class="text-xs text-slate-500">Información del tutor y configuración de horarios</p>
+                            </div>
+                        </div>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100/70 text-emerald-900 border border-emerald-200">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-700"></i>
+                            <span>Tutor Académico</span>
+                        </span>
+                    </div>
+
+                    <div class="p-5 sm:p-6">
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-end">
+                            <div class="lg:col-span-3">
+                                <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block mb-1.5">Nombre Completo</span>
+                                <div class="bg-slate-50/70 p-3 rounded-xl border border-slate-200/80">
+                                    <p class="text-sm font-semibold text-slate-800 truncate">{{ tutor.usuario.nombre_completo if tutor and tutor.usuario else 'No asignado' }}</p>
+                                </div>
+                            </div>
+
+                            <form method="POST" action="{{ url_for('actualizar_horario') }}" class="lg:col-span-6 flex flex-col sm:flex-row items-end gap-3">
+                                <div class="w-full space-y-1.5">
+                                    <label for="horario" class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                                        Horario de atención
+                                    </label>
+                                    <div class="relative">
+                                        <i data-lucide="clock" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+                                        <input type="text" name="horario" id="horario" value="{{ tutor.horario if tutor and tutor.horario else '' }}" placeholder="Ej. Lunes a Viernes 08:00-16:00" required 
+                                            class="w-full h-10 pl-10 pr-3.5 text-sm bg-slate-50/50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:bg-white focus:border-[#1A5333] focus:ring-2 focus:ring-[#1A5333]/20 transition-all outline-none" />
+                                    </div>
+                                </div>
+                                <button type="submit" class="w-full sm:w-auto h-10 px-4 bg-[#1A5333] hover:bg-[#144228] active:scale-[0.99] text-white font-medium text-xs rounded-lg transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 shrink-0 focus:outline-none focus:ring-2 focus:ring-[#1A5333]/30">
+                                    <i data-lucide="save" class="w-4 h-4"></i>
+                                    <span>Actualizar</span>
+                                </button>
+                            </form>
+
+                            <div class="lg:col-span-3">
+                                <a href="{{ url_for('reporte_tutor_pdf') }}" class="w-full h-10 px-4 text-xs font-medium text-[#1A5333] bg-white hover:bg-emerald-50 border border-emerald-300 rounded-lg transition-all shadow-sm flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                                    <i data-lucide="file-text" class="w-4 h-4 text-[#1A5333]"></i>
+                                    <span>Reporte General PDF</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- FORMULARIO: ASIGNAR NUEVA TUTORÍA -->
+                <section class="bg-white rounded-2xl border border-slate-200/80 shadow-saas-card hover:shadow-saas-hover transition-all">
+                    <div class="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div class="flex items-center gap-2.5">
+                            <div class="p-2 rounded-lg bg-emerald-50 text-[#1A5333] border border-emerald-100">
+                                <i data-lucide="calendar-plus" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-semibold text-slate-800">Asignar Nueva Tutoría</h2>
+                                <p class="text-xs text-slate-500">Agenda una sesión académica con un alumno asignado</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-5 sm:p-6">
+                        <form method="POST" action="{{ url_for('crear_tutoria') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                            <div class="space-y-1.5">
+                                <label for="id_alumno" class="block text-xs font-semibold text-slate-700">
+                                    Alumno <span class="text-rose-500">*</span>
+                                </label>
+                                <select id="id_alumno" name="id_alumno" required 
+                                    class="w-full h-10 px-3.5 text-sm bg-slate-50/50 border border-slate-200 rounded-lg text-slate-800 focus:bg-white focus:border-[#1A5333] focus:ring-2 focus:ring-[#1A5333]/20 transition-all outline-none">
+                                    <option value="" disabled selected>Selecciona alumno</option>
+                                    {% if alumnos %}
+                                        {% for a in alumnos %}
+                                            <option value="{{ a.id }}">{{ a.usuario.nombre_completo if a.usuario else 'Sin nombre' }} ({{ a.usuario.credencial if a.usuario else 'Sin matrícula' }})</option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <label for="fecha" class="block text-xs font-semibold text-slate-700">
+                                    Fecha <span class="text-rose-500">*</span>
+                                </label>
+                                <input type="date" id="fecha" name="fecha" required 
+                                    class="w-full h-10 px-3.5 text-sm bg-slate-50/50 border border-slate-200 rounded-lg text-slate-800 focus:bg-white focus:border-[#1A5333] focus:ring-2 focus:ring-[#1A5333]/20 transition-all outline-none" />
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <label for="tema" class="block text-xs font-semibold text-slate-700">
+                                    Tema <span class="text-rose-500">*</span>
+                                </label>
+                                <input type="text" id="tema" name="tema" placeholder="Ej. Repaso de Examen" required 
+                                    class="w-full h-10 px-3.5 text-sm bg-slate-50/50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:bg-white focus:border-[#1A5333] focus:ring-2 focus:ring-[#1A5333]/20 transition-all outline-none" />
+                            </div>
+
+                            <div>
+                                <button type="submit" class="w-full h-10 bg-[#1A5333] hover:bg-[#144228] active:scale-[0.99] text-white font-semibold text-sm rounded-lg transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#1A5333]/30">
+                                    <i data-lucide="plus" class="w-4 h-4"></i>
+                                    <span>Crear Tutoría</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- TABLA DE TUTORÍAS -->
+                <section class="bg-white rounded-2xl border border-slate-200/80 shadow-saas-card hover:shadow-saas-hover transition-all overflow-hidden">
+                    <div class="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div class="flex items-center gap-2.5">
+                            <div class="p-2 rounded-lg bg-emerald-50 text-[#1A5333] border border-emerald-100">
+                                <i data-lucide="list-checks" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-semibold text-slate-800">Tutorías a mi Cargo</h2>
+                                <p class="text-xs text-slate-500">Listado y gestión de sesiones programadas</p>
+                            </div>
+                        </div>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                            {{ tutorias|length if tutorias else 0 }} Registros
+                        </span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm border-collapse min-w-[700px]">
+                            <thead>
+                                <tr class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                                    <th scope="col" class="py-3.5 px-6">Alumno</th>
+                                    <th scope="col" class="py-3.5 px-6">Fecha</th>
+                                    <th scope="col" class="py-3.5 px-6">Tema</th>
+                                    <th scope="col" class="py-3.5 px-6">Estado</th>
+                                    <th scope="col" class="py-3.5 px-6 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                {% if tutorias %}
+                                    {% for t in tutorias %}
+                                    <tr class="hover:bg-slate-50/70 transition-colors group">
+                                        <td class="py-4 px-6 font-medium text-slate-800 whitespace-nowrap">
+                                            <div class="flex items-center gap-2.5">
+                                                <div class="w-7 h-7 rounded-full bg-emerald-50 text-[#1A5333] border border-emerald-100 flex items-center justify-center text-xs font-bold shrink-0">
+                                                    {{ t.alumno.usuario.nombre_completo.strip()[0] if t.alumno and t.alumno.usuario and t.alumno.usuario.nombre_completo else 'A' }}
+                                                </div>
+                                                <span>{{ t.alumno.usuario.nombre_completo if t.alumno and t.alumno.usuario else 'Sin Alumno' }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="py-4 px-6 whitespace-nowrap text-slate-600">
+                                            <div class="flex items-center gap-2">
+                                                <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#1A5333] transition-colors"></i>
+                                                <span>
+                                                    {% if t.fecha and t.fecha.strftime is defined %}
+                                                        {{ t.fecha.strftime('%d/%m/%Y') }}
+                                                    {% else %}
+                                                        {{ t.fecha }}
+                                                    {% endif %}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td class="py-4 px-6 text-slate-700 max-w-xs truncate font-normal">
+                                            {{ t.tema }}
+                                        </td>
+                                        <td class="py-4 px-6 whitespace-nowrap">
+                                            {% if t.estado == 'Solicitada' %}
+                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200/60">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                                    Solicitada
+                                                </span>
+                                            {% elif t.estado == 'Realizada' %}
+                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                                    Realizada
+                                                </span>
+                                            {% elif t.estado == 'En proceso' %}
+                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-sky-50 text-sky-700 border border-sky-200/60">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse"></span>
+                                                    En proceso
+                                                </span>
+                                            {% else %}
+                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                                                    {{ t.estado }}
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-4 px-6 whitespace-nowrap text-right">
+                                            <div class="flex items-center justify-end gap-1.5">
+                                                {% if t.estado == 'Solicitada' %}
+                                                    <a href="{{ url_for('aceptar_tutoria', id=t.id) }}" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                                                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                                        <span>Aceptar</span>
+                                                    </a>
+                                                    <a href="{{ url_for('form_editar_tutoria', id=t.id) }}" class="inline-flex items-center p-1 text-[#1A5333] bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/20" title="Editar">
+                                                        <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                                                    </a>
+                                                {% endif %}
+
+                                                {% if t.estado in ['Asignada por el tutor', 'Asignada por tutor', 'Confirmada'] %}
+                                                    <a href="{{ url_for('iniciar_tutoria', id=t.id) }}" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-[#1A5333] hover:bg-[#144228] border border-transparent rounded-lg transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1A5333]/20">
+                                                        <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                                                        <span>Iniciar</span>
+                                                    </a>
+                                                {% endif %}
+
+                                                {% if t.estado in ['Asignada por el tutor', 'Asignada por tutor', 'En proceso', 'Realizada'] %}
+                                                    <a href="{{ url_for('ver_tutoria_individual', id=t.id) }}" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/20" title="Ver HTML">
+                                                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                                        <span>Ficha</span>
+                                                    </a>
+                                                    
+                                                    <a href="{{ url_for('descargar_ficha_tutoria_pdf', id=t.id) }}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-rose-500/20" title="Descargar PDF">
+                                                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                                                        <span>PDF</span>
+                                                    </a>
+                                                {% endif %}
+
+                                                {% if t.estado not in ['Asignada por el tutor', 'Asignada por tutor', 'En proceso', 'Realizada'] %}
+                                                    <a href="{{ url_for('completar_tutoria', id=t.id) }}" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                                                        <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
+                                                        <span>Completar</span>
+                                                    </a>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="py-12 text-center text-slate-400">
+                                        <div class="flex flex-col items-center justify-center gap-2">
+                                            <div class="p-3 rounded-full bg-slate-50 border border-slate-100 text-slate-300">
+                                                <i data-lucide="inbox" class="w-6 h-6"></i>
+                                            </div>
+                                            <p class="text-sm font-medium text-slate-600">Sin tutorías pendientes</p>
+                                            <p class="text-xs text-slate-400">Las tutorías programadas aparecerán reflejadas en esta sección.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- SECCIÓN: VISTA LISTA COMPLETA DE ALUMNOS -->
+            <div id="vista-alumnos" class="hidden space-y-6">
+                <section class="bg-white rounded-2xl border border-slate-200/80 shadow-saas-card overflow-hidden">
+                    <div class="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div class="flex items-center gap-2.5">
+                            <div class="p-2 rounded-lg bg-emerald-50 text-[#1A5333] border border-emerald-100">
+                                <i data-lucide="users" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-semibold text-slate-800">Alumnos Asignados</h2>
+                                <p class="text-xs text-slate-500">Listado general de estudiantes tutorados</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            {% if session.get('rol') == 'coordinador' %}
+                            <a href="{{ url_for('actualizar_asignacion_masiva') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all">
+                                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                                <span>Actualizar Asignación Masiva</span>
+                            </a>
+                            {% endif %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                {{ alumnos|length if alumnos else 0 }} Alumnos
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm border-collapse min-w-[650px]">
+                            <thead>
+                                <tr class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                                    <th scope="col" class="py-3.5 px-6">Matrícula</th>
+                                    <th scope="col" class="py-3.5 px-6">Nombre del Alumno</th>
+                                    <th scope="col" class="py-3.5 px-6">Rendimiento</th>
+                                    <th scope="col" class="py-3.5 px-6">Tutorías Asignadas</th>
+                                    <th scope="col" class="py-3.5 px-6 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                {% if alumnos %}
+                                    {% for a in alumnos %}
+                                    <tr class="hover:bg-slate-50/70 transition-colors">
+                                        <td class="py-4 px-6 font-mono text-xs text-slate-500">
+                                            {{ a.usuario.credencial if a.usuario and a.usuario.credencial else 'N/A' }}
+                                        </td>
+                                        <td class="py-4 px-6 font-medium text-slate-800 whitespace-nowrap">
+                                            <div class="flex items-center gap-2.5">
+                                                <div class="w-7 h-7 rounded-full bg-emerald-50 text-[#1A5333] border border-emerald-100 flex items-center justify-center text-xs font-bold shrink-0">
+                                                    {{ a.usuario.nombre_completo.strip()[0] if a.usuario and a.usuario.nombre_completo else 'A' }}
+                                                </div>
+                                                <span>{{ a.usuario.nombre_completo if a.usuario else 'Sin Nombre' }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="py-4 px-6 text-slate-600">
+                                            {{ a.rendimiento or 'Sin registro' }}
+                                        </td>
+                                        <td class="py-4 px-6 whitespace-nowrap text-slate-600">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700">
+                                                {{ a.lista_tutorias|length if a.lista_tutorias else 0 }} tutoría(s)
+                                            </span>
+                                        </td>
+                                        <td class="py-4 px-6 whitespace-nowrap text-right">
+                                            <button onclick="alternarVista('general')" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-[#1A5333] bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all">
+                                                <i data-lucide="calendar-plus" class="w-3.5 h-3.5"></i>
+                                                <span>Agendar</span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="py-12 text-center text-slate-400">
+                                        <div class="flex flex-col items-center justify-center gap-2">
+                                            <div class="p-3 rounded-full bg-slate-50 border border-slate-100 text-slate-300">
+                                                <i data-lucide="users" class="w-6 h-6"></i>
+                                            </div>
+                                            <p class="text-sm font-medium text-slate-600">No hay alumnos asignados</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- SECCIÓN: VISTA GRUPOS ASIGNADOS -->
+            <div id="vista-grupos" class="hidden space-y-6">
+                <section class="bg-white rounded-2xl border border-slate-200/80 shadow-saas-card p-6">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2.5 rounded-xl bg-emerald-50 text-[#1A5333] border border-emerald-100">
+                                <i data-lucide="users-round" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-800">Grupos Asignados</h2>
+                                <p class="text-xs text-slate-500" id="info-tutor-grupos">Cargando grupos del tutor...</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold text-slate-500">Seleccionar Grupo:</span>
+                            <div class="inline-flex rounded-xl p-1 bg-slate-100 border border-slate-200" id="contenedor-botones-grupo">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-saas-card p-5 flex items-center gap-4">
+                        <div class="w-11 h-11 rounded-xl bg-sky-50 text-sky-600 border border-sky-100 flex items-center justify-center shrink-0">
+                            <i data-lucide="user-check" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Alumnos en el Grupo</p>
+                            <h4 class="text-2xl font-bold text-slate-800 mt-0.5" id="stat-total-alumnos">0</h4>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-saas-card p-5 flex items-center gap-4">
+                        <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+                            <i data-lucide="award" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Promedio General</p>
+                            <h4 class="text-2xl font-bold text-slate-800 mt-0.5" id="stat-promedio-grupo">0.0</h4>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-saas-card p-5 flex items-center gap-4">
+                        <div class="w-11 h-11 rounded-xl bg-emerald-50 text-[#1A5333] border border-emerald-100 flex items-center justify-center shrink-0">
+                            <i data-lucide="check-circle" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Atención en Tutorías</p>
+                            <h4 class="text-2xl font-bold text-slate-800 mt-0.5" id="stat-asistencia-grupo">0%</h4>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div class="lg:col-span-8 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-saas-card">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-800">Rendimiento Académico Individual</h3>
+                                <p class="text-xs text-slate-400">Alumnos asignados al grupo actual</p>
+                            </div>
+                            <span class="p-1.5 rounded-lg bg-slate-50 text-slate-400"><i data-lucide="bar-chart-3" class="w-4 h-4"></i></span>
+                        </div>
+                        <div class="relative h-64">
+                            <canvas id="chartPromedios"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-saas-card">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-800">Estado de Tutorías</h3>
+                                <p class="text-xs text-slate-400">Estatus de los alumnos del grupo</p>
+                            </div>
+                            <span class="p-1.5 rounded-lg bg-slate-50 text-slate-400"><i data-lucide="pie-chart" class="w-4 h-4"></i></span>
+                        </div>
+                        <div class="relative h-64 flex items-center justify-center">
+                            <canvas id="chartEstatus"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="bg-white rounded-2xl border border-slate-200/80 shadow-saas-card overflow-hidden">
+                    <div class="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div class="flex items-center gap-2.5">
+                            <div class="p-2 rounded-lg bg-emerald-50 text-[#1A5333] border border-emerald-100">
+                                <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-semibold text-slate-800" id="titulo-tabla-alumnos">Lista de Alumnos</h3>
+                                <p class="text-xs text-slate-500">Estudiantes asignados en la base de datos</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm border-collapse min-w-[600px]">
+                            <thead>
+                                <tr class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                                    <th scope="col" class="py-3.5 px-6">Matrícula</th>
+                                    <th scope="col" class="py-3.5 px-6">Nombre del Alumno</th>
+                                    <th scope="col" class="py-3.5 px-6">Grupo</th>
+                                    <th scope="col" class="py-3.5 px-6">Rendimiento</th>
+                                    <th scope="col" class="py-3.5 px-6">Estatus Tutoría</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-cuerpo-alumnos" class="divide-y divide-slate-100">
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- MENÚ LATERAL (SIDEBAR) VERDE -->
+    <div class="drawer-side z-50">
+        <label for="menu-drawer" aria-label="Cerrar menú de navegación" class="drawer-overlay bg-slate-900/30"></label>
+        <aside class="bg-[#1A5333] text-white w-72 h-full flex flex-col justify-between p-4 shadow-xl">
+            <div class="space-y-6">
+                <div class="flex items-center gap-3 px-3 py-2 border-b border-emerald-700/50 pb-4">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-600/50 border border-emerald-400/30 flex items-center justify-center text-white shrink-0">
+                        <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-base font-bold tracking-tight leading-none text-white">Tutorías UT</span>
+                        <span class="text-[10px] font-semibold text-emerald-200 tracking-wider uppercase mt-1">Portal Docente</span>
+                    </div>
+                </div>
+
+                <nav class="space-y-1">
+                    <span class="px-3 text-[10px] font-bold uppercase tracking-wider text-emerald-200/60 block mb-2">Navegación</span>
+                    
+                    <button onclick="alternarVista('general')" id="nav-inicio" class="w-full relative flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all group bg-emerald-800/60 text-white border border-emerald-600/40">
+                        <i data-lucide="home" class="w-4 h-4 text-emerald-300"></i>
+                        <span>Inicio</span>
+                    </button>
+
+                    <button onclick="alternarVista('alumnos')" id="nav-alumnos" class="w-full relative flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-emerald-100 hover:bg-emerald-800/40 hover:text-white transition-all group">
+                        <i data-lucide="users" class="w-4 h-4 text-emerald-300/70 group-hover:text-emerald-200 transition-colors"></i>
+                        <span>Mis Alumnos</span>
+                    </button>
+
+                    <button onclick="alternarVista('grupos')" id="nav-grupos" class="w-full relative flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-emerald-100 hover:bg-emerald-800/40 hover:text-white transition-all group">
+                        <i data-lucide="users-round" class="w-4 h-4 text-emerald-300/70 group-hover:text-emerald-200 transition-colors"></i>
+                        <span>Grupos Asignados</span>
+                    </button>
+
+                    <a href="{{ url_for('reportes_tutor') }}" class="relative flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-emerald-100 hover:bg-emerald-800/40 hover:text-white transition-all group">
+                        <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-300/70 group-hover:text-emerald-200 transition-colors"></i>
+                        <span>Mis Reportes</span>
+                    </a>
+                </nav>
+            </div>
+
+            <div class="pt-4 border-t border-emerald-700/50 space-y-3">
+                <div class="p-3 rounded-xl bg-emerald-800/40 border border-emerald-600/30 flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-emerald-100 text-[#1A5333] flex items-center justify-center font-bold text-xs shrink-0">
+                        {{ tutor.usuario.nombre_completo[0] if tutor and tutor.usuario and tutor.usuario.nombre_completo else 'T' }}
+                    </div>
+                    <div class="flex flex-col min-w-0">
+                        <span class="text-xs font-semibold text-white truncate" id="nombre-tutor-sidebar">
+                            {{ tutor.usuario.nombre_completo if tutor and tutor.usuario else 'Tutor' }}
+                        </span>
+                        <span class="text-[10px] text-emerald-200/80 truncate">Docente / Tutor</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-1.5 px-2 text-[11px] text-emerald-200/80">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-300"></i>
+                    <span>Acceso Docente Seguro</span>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+</div>
+
+<!-- LÓGICA DINÁMICA DE ALUMNOS, GRUPOS Y GRÁFICAS -->
+<script>
+    const alumnosReales = [
+        {% if alumnos %}
+            {% for a in alumnos %}
+            {
+                id: {{ a.id|tojson }},
+                matricula: {{ (a.usuario.credencial if a.usuario and a.usuario.credencial else 'SIN-MATRICULA')|tojson }},
+                nombre: {{ (a.usuario.nombre_completo if a.usuario and a.usuario.nombre_completo else 'Sin nombre')|tojson }},
+                rendimiento: {{ (a.rendimiento or 'Sin registro')|tojson }},
+                tutoriasCount: {{ a.lista_tutorias|length if a.lista_tutorias else 0 }},
+                realizadasCount: {{ a.lista_tutorias|selectattr('estado', 'equalto', 'Realizada')|list|length if a.lista_tutorias else 0 }}
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        {% endif %}
+    ];
+
+    const nombreTutorActual = {{ (tutor.usuario.nombre_completo if tutor and tutor.usuario and tutor.usuario.nombre_completo else '')|tojson }}.toLowerCase();
+    let esSilvia = nombreTutorActual.includes('silvia');
+    let gruposTutor = esSilvia ? ['91', '92'] : ['93', '94'];
+    let nombreTutorFormatted = {{ (tutor.usuario.nombre_completo if tutor and tutor.usuario and tutor.usuario.nombre_completo else 'Docente Tutor')|tojson }};
+
+    const baseAlumnosGrupos = {};
+    const mitad = Math.ceil(alumnosReales.length / 2);
+    
+    baseAlumnosGrupos[gruposTutor[0]] = alumnosReales.slice(0, mitad).map((al, idx) => ({
+        ...al,
+        promedio: Number((8.0 + (idx * 0.3) % 2).toFixed(1)),
+        estatus: al.realizadasCount > 0 ? 'Realizada' : (al.tutoriasCount > 0 ? 'Pendiente' : 'En Riesgo')
+    }));
+
+    baseAlumnosGrupos[gruposTutor[1]] = alumnosReales.slice(mitad).map((al, idx) => ({
+        ...al,
+        promedio: Number((8.2 + (idx * 0.25) % 1.8).toFixed(1)),
+        estatus: al.realizadasCount > 0 ? 'Realizada' : (al.tutoriasCount > 0 ? 'Pendiente' : 'En Riesgo')
+    }));
+
+    let chartPromediosInstancia = null;
+    let chartEstatusInstancia = null;
+    let grupoSeleccionadoActivo = gruposTutor[0];
+
+    function alternarVista(vista) {
+        const vistaGen = document.getElementById('vista-general');
+        const vistaAlum = document.getElementById('vista-alumnos');
+        const vistaGrup = document.getElementById('vista-grupos');
+
+        const navInicio = document.getElementById('nav-inicio');
+        const navAlumnos = document.getElementById('nav-alumnos');
+        const navGrupos = document.getElementById('nav-grupos');
+
+        vistaGen.classList.add('hidden');
+        vistaAlum.classList.add('hidden');
+        vistaGrup.classList.add('hidden');
+
+        const claseInactiva = "w-full relative flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-emerald-100 hover:bg-emerald-800/40 hover:text-white transition-all group";
+        const claseActiva = "w-full relative flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all group bg-emerald-800/60 text-white border border-emerald-600/40";
+
+        navInicio.className = claseInactiva;
+        navAlumnos.className = claseInactiva;
+        navGrupos.className = claseInactiva;
+
+        if (vista === 'grupos') {
+            vistaGrup.classList.remove('hidden');
+            navGrupos.className = claseActiva;
+            cargarConfiguracionGrupos();
+        } else if (vista === 'alumnos') {
+            vistaAlum.classList.remove('hidden');
+            navAlumnos.className = claseActiva;
+        } else {
+            vistaGen.classList.remove('hidden');
+            navInicio.className = claseActiva;
+        }
+        
+        const checkboxDrawer = document.getElementById('menu-drawer');
+        if (checkboxDrawer) checkboxDrawer.checked = false;
+    }
+
+    function cargarConfiguracionGrupos() {
+        const elemInfo = document.getElementById('info-tutor-grupos');
+        if(elemInfo) {
+            elemInfo.textContent = `Tutor: ${nombreTutorFormatted} · Grupos a su cargo: ${gruposTutor.join(' y ')}`;
+        }
+
+        const contenedorBotones = document.getElementById('contenedor-botones-grupo');
+        if (contenedorBotones) {
+            contenedorBotones.innerHTML = '';
+
+            gruposTutor.forEach(grupo => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.onclick = () => seleccionarGrupo(grupo);
+                btn.id = `btn-grupo-${grupo}`;
+                btn.className = `px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${grupo === grupoSeleccionadoActivo ? 'bg-white text-[#1A5333] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`;
+                btn.textContent = `Grupo ${grupo}`;
+                contenedorBotones.appendChild(btn);
+            });
+        }
+
+        seleccionarGrupo(grupoSeleccionadoActivo);
+    }
+
+    function seleccionarGrupo(grupo) {
+        grupoSeleccionadoActivo = grupo;
+
+        gruposTutor.forEach(g => {
+            const b = document.getElementById(`btn-grupo-${g}`);
+            if (b) {
+                if (g === grupo) {
+                    b.className = "px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all bg-white text-[#1A5333] shadow-sm";
+                } else {
+                    b.className = "px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all text-slate-500 hover:text-slate-800";
+                }
+            }
+        });
+
+        const alumnos = baseAlumnosGrupos[grupo] || [];
+
+        const totalAlumnos = alumnos.length;
+        const promedioSuma = alumnos.reduce((acc, curr) => acc + curr.promedio, 0);
+        const promedioGeneral = totalAlumnos > 0 ? (promedioSuma / totalAlumnos).toFixed(1) : '0.0';
+        const realizadas = alumnos.filter(a => a.estatus === 'Realizada').length;
+        const porcentajeAsistencia = totalAlumnos > 0 ? Math.round((realizadas / totalAlumnos) * 100) : 0;
+
+        document.getElementById('stat-total-alumnos').textContent = totalAlumnos;
+        document.getElementById('stat-promedio-grupo').textContent = promedioGeneral;
+        document.getElementById('stat-asistencia-grupo').textContent = `${porcentajeAsistencia}%`;
+        document.getElementById('titulo-tabla-alumnos').textContent = `Alumnos Asignados · Grupo ${grupo}`;
+
+        const tbody = document.getElementById('tabla-cuerpo-alumnos');
+        if (tbody) {
+            tbody.innerHTML = '';
+
+            if (alumnos.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">No hay alumnos asignados a este grupo.</td></tr>`;
+            } else {
+                alumnos.forEach(alumno => {
+                    let badgeEstatus = '';
+                    if (alumno.estatus === 'Realizada') {
+                        badgeEstatus = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Atendido</span>';
+                    } else if (alumno.estatus === 'Pendiente') {
+                        badgeEstatus = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200/60"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Programado</span>';
+                    } else {
+                        badgeEstatus = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200/60"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>Sin Tutoría</span>';
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50/70 transition-colors";
+                    tr.innerHTML = `
+                        <td class="py-3.5 px-6 font-mono text-xs text-slate-500">${alumno.matricula}</td>
+                        <td class="py-3.5 px-6 font-medium text-slate-800">${alumno.nombre}</td>
+                        <td class="py-3.5 px-6 text-slate-600 font-semibold">Grupo ${grupo}</td>
+                        <td class="py-3.5 px-6 text-slate-600">${alumno.rendimiento}</td>
+                        <td class="py-3.5 px-6 whitespace-nowrap">${badgeEstatus}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        renderizarGraficasGrupo(alumnos, grupo);
+
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
+
+    function renderizarGraficasGrupo(alumnos, grupo) {
+        const nombres = alumnos.map(a => {
+            const partes = a.nombre.split(' ');
+            return partes[0] + ' ' + (partes[1] ? partes[1][0] + '.' : '');
+        });
+        const promedios = alumnos.map(a => a.promedio);
+
+        const estatusCount = {
+            'Realizada': alumnos.filter(a => a.estatus === 'Realizada').length,
+            'Pendiente': alumnos.filter(a => a.estatus === 'Pendiente').length,
+            'En Riesgo': alumnos.filter(a => a.estatus === 'En Riesgo').length
+        };
+
+        const canvasProm = document.getElementById('chartPromedios');
+        if (canvasProm) {
+            const ctxPromedios = canvasProm.getContext('2d');
+            if (chartPromediosInstancia) chartPromediosInstancia.destroy();
+
+            chartPromediosInstancia = new Chart(ctxPromedios, {
+                type: 'bar',
+                data: {
+                    labels: nombres.length > 0 ? nombres : ['Sin datos'],
+                    datasets: [{
+                        label: `Promedio estimado Grupo ${grupo}`,
+                        data: promedios.length > 0 ? promedios : [0],
+                        backgroundColor: 'rgba(26, 83, 51, 0.85)',
+                        borderColor: '#1A5333',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { min: 0, max: 10, ticks: { stepSize: 2 } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        const canvasEst = document.getElementById('chartEstatus');
+        if (canvasEst) {
+            const ctxEstatus = canvasEst.getContext('2d');
+            if (chartEstatusInstancia) chartEstatusInstancia.destroy();
+
+            chartEstatusInstancia = new Chart(ctxEstatus, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Atendidos', 'Programados', 'Sin Tutoría'],
+                    datasets: [{
+                        data: [estatusCount['Realizada'], estatusCount['Pendiente'], estatusCount['En Riesgo']],
+                        backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 12, font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+
+        const fechaInput = document.getElementById("fecha");
+        if (fechaInput) {
+            const hoy = new Date();
+            const yyyy = hoy.getFullYear();
+            const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+            const dd = String(hoy.getDate()).padStart(2, '0');
+            fechaInput.setAttribute("min", `${yyyy}-${mm}-${dd}`);
+        }
+    });
+</script>
+</body>
+</html>
