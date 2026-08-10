@@ -15,7 +15,10 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'clave_segura_sistema_tu
 
 CARPETA_BASE = os.path.abspath(os.path.dirname(__file__))
 RUTA_DB = os.path.join(CARPETA_BASE, "sistema_tutorias.db")
-PLANTILLA_EXCEL = os.path.join(CARPETA_BASE, "Reporte_Tutoria_Individual_UTN.xlsx")
+
+# Rutas de las plantillas de Excel que contienen el formato visual
+PLANTILLA_INDIVIDUAL = os.path.join(CARPETA_BASE, "Reporte_Tutoria_Individual_UTN_3.xlsx")
+PLANTILLA_GENERAL = os.path.join(CARPETA_BASE, "REPORTE_GRUPO_TUTORIAS_3.xlsx")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{RUTA_DB}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -259,7 +262,6 @@ threading.Thread(target=tarea_respaldo_automatico, daemon=True).start()
 
 # ===================== FUNCIONES AUXILIARES =====================
 def limpiar_texto(texto):
-    """Limpia cadenas para ser compatibles con la codificación de FPDF en latin-1"""
     if texto is None:
         return ""
     return str(texto).encode('latin-1', 'replace').decode('latin-1')
@@ -281,13 +283,9 @@ def generar_pdf(datos, titulo, columnas):
             pdf.cell(anchos[i], 8, limpiar_texto(celda), border=1, align="C")
         pdf.ln()
     
-    pdf_output = pdf.output(dest='S')
-    if isinstance(pdf_output, str):
-        pdf_bytes = pdf_output.encode('latin-1', 'replace')
-    else:
-        pdf_bytes = bytes(pdf_output)
-        
-    buffer = io.BytesIO(pdf_bytes)
+    buffer = io.BytesIO()
+    pdf_bytes = pdf.output(dest='S').encode('latin-1', 'replace')
+    buffer.write(pdf_bytes)
     buffer.seek(0)
     return buffer
 
@@ -501,7 +499,7 @@ def crear_tutoria():
         flash("Tutoría creada exitosamente", "success")
     except ValueError:
         db.session.rollback()
-        flash("Formato de datos no válido (verifique la fecha o selección del alumno)", "error")
+        flash("Formato de datos no válido", "error")
     except Exception as e:
         db.session.rollback()
         flash("Ocurrió un error inesperado al procesar la tutoría", "error")
@@ -525,7 +523,7 @@ def completar_tutoria(id):
 def reporte_tutor_pdf():
     tutor = Tutor.query.filter_by(usuario_id=g.uid).first()
     tutorias = Tutoria.query.filter_by(id_tutor=g.uid).all()
-    datos = [(t.alumno.usuario.nombre_completo if t.alumno and t.alumno.usuario else 'Sin Alumno', t.fecha.strftime("%d/%m/%Y") if t.fecha else '', t.tema, t.estado) for t in tutorias]
+    datos = [(t.alumno.usuario.nombre_completo if t.alumno and t.alumno.usuario else 'Sin Alumno', t.fecha.strftime("%d/%m/%Y"), t.tema, t.estado) for t in tutorias]
     buffer_pdf = generar_pdf(datos, f"Tutorías a mi cargo - {tutor.usuario.nombre_completo if tutor and tutor.usuario else ''}", ["Alumno", "Fecha", "Tema", "Estado"])
     return send_file(buffer_pdf, mimetype='application/pdf', as_attachment=True, download_name="tutorias_tutor.pdf")
 
@@ -540,7 +538,7 @@ def reportes_tutor():
     pendientes = sum(1 for t in mis_tutorias if t.estado in ["Solicitada", "Confirmada", "Asignada por tutor"])
     return render_template("reportes_tutor.html", total=total, realizadas=realizadas, pendientes=pendientes, alumnos=mis_alumnos, tutorias=mis_tutorias)
 
-# ===================== TUTORÍA INDIVIDUAL Y GENERACIÓN DE FICHA DESDE EXCEL =====================
+# ===================== TUTORÍA INDIVIDUAL Y REPORTES EXCEL =====================
 @app.route("/iniciar-tutoria/<int:id>")
 @requiere_rol("tutor")
 def iniciar_tutoria(id):
@@ -586,7 +584,6 @@ def ver_tutoria_individual(id):
 def descargar_ficha_tutoria_pdf(id):
     try:
         tutoria = Tutoria.query.get_or_404(id)
-        
         if g.rol == "tutor" and tutoria.id_tutor != g.uid:
             flash("No tienes permiso para ver esta tutoría", "error")
             return redirect(url_for("panel_tutor"))
@@ -601,49 +598,29 @@ def descargar_ficha_tutoria_pdf(id):
         if not horario:
             horario = "N/A"
 
+        datos_pdf = [
+            ["Alumno:", nombre_alumno, "Matricula:", matricula_alumno],
+            ["Carrera:", tutoria.carrera or "TIC", "Grupo / Fecha:", f"{tutoria.grupo or 'N/A'} / {fecha_str}"],
+            ["Tutor:", nombre_tutor, "Horario:", horario],
+            ["Motivo:", tutoria.motivo or tutoria.tema or "N/A", "Estado:", tutoria.estado or "N/A"],
+            ["Puntos Relevantes:", tutoria.puntos_relevantes or "N/A", "", ""],
+            ["Compromisos:", tutoria.compromisos or "N/A", "", ""]
+        ]
+        
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", "B", 14)
         pdf.cell(0, 10, limpiar_texto(f"FICHA DE TUTORIA INDIVIDUAL No. {tutoria.id}"), ln=1, align="C")
         pdf.ln(5)
+        
+        pdf.set_font("Arial", "", 9)
+        anchos = [40, 50, 40, 50]
+        for fila in datos_pdf:
+            for i, celda in enumerate(fila):
+                pdf.cell(anchos[i], 8, limpiar_texto(celda), border=1, align="L")
+            pdf.ln()
 
-        def agregar_fila_par(lbl1, val1, lbl2, val2):
-            pdf.set_font("Arial", "B", 9)
-            pdf.cell(35, 7, limpiar_texto(lbl1), border=1)
-            pdf.set_font("Arial", "", 9)
-            pdf.cell(55, 7, limpiar_texto(val1), border=1)
-            pdf.set_font("Arial", "B", 9)
-            pdf.cell(35, 7, limpiar_texto(lbl2), border=1)
-            pdf.set_font("Arial", "", 9)
-            pdf.cell(55, 7, limpiar_texto(val2), border=1, ln=1)
-
-        def agregar_bloque_texto(titulo_bloque, texto_bloque):
-            pdf.set_font("Arial", "B", 9)
-            pdf.cell(180, 7, limpiar_texto(titulo_bloque), border=1, ln=1, align="L")
-            pdf.set_font("Arial", "", 9)
-            pdf.multi_cell(180, 6, limpiar_texto(texto_bloque or "N/A"), border=1, align="L")
-
-        agregar_fila_par("Alumno:", nombre_alumno, "Matricula:", matricula_alumno)
-        agregar_fila_par("Carrera:", tutoria.carrera or "TIC", "Grupo / Fecha:", f"{tutoria.grupo or 'N/A'} / {fecha_str}")
-        agregar_fila_par("Tutor:", nombre_tutor, "Horario:", horario)
-        agregar_fila_par("Estado:", tutoria.estado or "N/A", "", "")
-        pdf.ln(3)
-
-        agregar_bloque_texto("Motivo:", tutoria.motivo or tutoria.tema)
-        pdf.ln(2)
-        agregar_bloque_texto("Puntos Relevantes:", tutoria.puntos_relevantes)
-        pdf.ln(2)
-        agregar_bloque_texto("Compromisos:", tutoria.compromisos)
-        pdf.ln(2)
-        agregar_bloque_texto("Observaciones:", tutoria.observaciones)
-
-        pdf_output = pdf.output(dest='S')
-        if isinstance(pdf_output, str):
-            pdf_bytes = pdf_output.encode('latin-1', 'replace')
-        else:
-            pdf_bytes = bytes(pdf_output)
-
-        buffer_pdf = io.BytesIO(pdf_bytes)
+        buffer_pdf = io.BytesIO(pdf.output(dest='S').encode('latin-1', 'replace'))
         buffer_pdf.seek(0)
 
         return send_file(
@@ -655,10 +632,8 @@ def descargar_ficha_tutoria_pdf(id):
 
     except Exception as e:
         print(f"Error generando la ficha PDF: {e}")
-        flash("Ocurrió un error al generar la ficha en PDF. Verifique los logs del servidor.", "error")
+        flash("Ocurrió un error al generar la ficha en PDF.", "error")
         return redirect(url_for("panel_tutor" if g.rol == "tutor" else "panel_alumno"))
-
-PLANTILLA_INDIVIDUAL = os.path.join(CARPETA_BASE, "Reporte_Tutoria_Individual_UTN_2.xlsx")
 
 @app.route("/descargar-ficha-tutoria-excel/<int:id>")
 @requiere_rol("tutor", "alumno")
@@ -673,26 +648,29 @@ def descargar_ficha_tutoria_excel(id):
             flash("La plantilla de reporte individual no se encuentra en el servidor", "error")
             return redirect(url_for("panel_tutor" if g.rol == "tutor" else "panel_alumno"))
 
-        wb = openpyxl.load_workbook(PLANTILLA_INDIVIDUAL)
+        # Carga del libro conservando el formato
+        wb = openpyxl.load_workbook(PLANTILLA_INDIVIDUAL, keep_vba=True, data_only=False)
         ws = wb.active
 
+        # Llenar variables
         nombre_alumno = tutoria.alumno.usuario.nombre_completo if (tutoria.alumno and tutoria.alumno.usuario) else "N/A"
         matricula_alumno = tutoria.alumno.usuario.credencial if (tutoria.alumno and tutoria.alumno.usuario) else "N/A"
         tutor_obj = Usuario.query.get(tutoria.id_tutor)
         nombre_tutor = tutor_obj.nombre_completo if tutor_obj else "N/A"
         fecha_str = tutoria.fecha.strftime("%d/%m/%Y") if tutoria.fecha else "N/A"
 
-        ws["C4"] = nombre_alumno
-        ws["C5"] = matricula_alumno
-        ws["C6"] = tutoria.carrera or "TIC"
-        ws["C7"] = tutoria.grupo or "N/A"
-        ws["G4"] = nombre_tutor
-        ws["G5"] = fecha_str
-        ws["G6"] = f"{tutoria.hr_inicio or ''} - {tutoria.hr_salida or ''}"
-        ws["C10"] = tutoria.motivo or tutoria.tema or "N/A"
-        ws["C14"] = tutoria.puntos_relevantes or "N/A"
-        ws["C18"] = tutoria.compromisos or "N/A"
-        ws["C22"] = tutoria.observaciones or "N/A"
+        # Asignar valores manteniendo el estilo preestablecido
+        ws["C4"].value = nombre_alumno
+        ws["C5"].value = matricula_alumno
+        ws["C6"].value = tutoria.carrera or "TIC"
+        ws["C7"].value = tutoria.grupo or "N/A"
+        ws["G4"].value = nombre_tutor
+        ws["G5"].value = fecha_str
+        ws["G6"].value = f"{tutoria.hr_inicio or ''} - {tutoria.hr_salida or ''}"
+        ws["C10"].value = tutoria.motivo or tutoria.tema or "N/A"
+        ws["C14"].value = tutoria.puntos_relevantes or "N/A"
+        ws["C18"].value = tutoria.compromisos or "N/A"
+        ws["C22"].value = tutoria.observaciones or "N/A"
 
         buffer = io.BytesIO()
         wb.save(buffer)
@@ -710,8 +688,6 @@ def descargar_ficha_tutoria_excel(id):
         flash("Ocurrió un error al generar la ficha en Excel.", "error")
         return redirect(url_for("panel_tutor" if g.rol == "tutor" else "panel_alumno"))
 
-PLANTILLA_GENERAL = os.path.join(CARPETA_BASE, "REPORTE_GRUPO_TUTORIAS.xlsx")
-
 @app.route("/reporte-general-excel")
 @requiere_rol("tutor", "coordinador")
 def reporte_general_excel():
@@ -720,27 +696,27 @@ def reporte_general_excel():
             flash("La plantilla de reporte general no existe en el servidor", "error")
             return redirect(url_for("panel_tutor" if g.rol == "tutor" else "panel_coordinador"))
 
-        wb = openpyxl.load_workbook(PLANTILLA_GENERAL)
+        wb = openpyxl.load_workbook(PLANTILLA_GENERAL, keep_vba=True, data_only=False)
         ws = wb.active
 
         if g.rol == "tutor":
             tutor_obj = Usuario.query.get(g.uid)
-            ws["C4"] = tutor_obj.nombre_completo if tutor_obj else "N/A"
+            ws["C4"].value = tutor_obj.nombre_completo if tutor_obj else "N/A"
             tutorias = Tutoria.query.filter_by(id_tutor=g.uid).all()
         else:
-            ws["C4"] = "Coordinador General"
+            ws["C4"].value = "Coordinador General"
             tutorias = Tutoria.query.all()
 
-        ws["C5"] = datetime.now().strftime("%d/%m/%Y")
+        ws["C5"].value = datetime.now().strftime("%d/%m/%Y")
 
         fila_inicio = 9
         for idx, tut in enumerate(tutorias, start=1):
-            ws[f"A{fila_inicio}"] = idx
-            ws[f"B{fila_inicio}"] = tut.alumno.usuario.credencial if (tut.alumno and tut.alumno.usuario) else "N/A"
-            ws[f"C{fila_inicio}"] = tut.alumno.usuario.nombre_completo if (tut.alumno and tut.alumno.usuario) else "N/A"
-            ws[f"D{fila_inicio}"] = tut.fecha.strftime("%d/%m/%Y") if tut.fecha else "N/A"
-            ws[f"E{fila_inicio}"] = tut.tema or "N/A"
-            ws[f"F{fila_inicio}"] = tut.estado or "N/A"
+            ws[f"A{fila_inicio}"].value = idx
+            ws[f"B{fila_inicio}"].value = tut.alumno.usuario.credencial if (tut.alumno and tut.alumno.usuario) else "N/A"
+            ws[f"C{fila_inicio}"].value = tut.alumno.usuario.nombre_completo if (tut.alumno and tut.alumno.usuario) else "N/A"
+            ws[f"D{fila_inicio}"].value = tut.fecha.strftime("%d/%m/%Y") if tut.fecha else "N/A"
+            ws[f"E{fila_inicio}"].value = tut.tema or "N/A"
+            ws[f"F{fila_inicio}"].value = tut.estado or "N/A"
             fila_inicio += 1
 
         buffer = io.BytesIO()
