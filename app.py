@@ -403,373 +403,6 @@ def reportes_alumno():
 @requiere_rol("tutor")
 def panel_tutor():
     tutor = Tutor.query.filter_by(usuario_id=g.uid).first()
-    tutorias = Tutoria.query.filter_by(id_tutor=g.uid).order_by(Tutoria.fecha.    rendimiento = db.Column(db.String(200), default="Sin registro")
-    usuario = db.relationship('Usuario', foreign_keys=[usuario_id], backref=db.backref('perfil_alumno', uselist=False), single_parent=True)
-    tutor = db.relationship('Usuario', foreign_keys=[id_tutor], backref='alumnos_asignados')
-
-class Tutor(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), unique=True, nullable=False)
-    horario = db.Column(db.String(200), default="Lunes a Viernes 08:00 - 16:00")
-    usuario = db.relationship('Usuario', foreign_keys=[usuario_id], backref=db.backref('perfil_tutor', uselist=False), single_parent=True)
-
-class Tutoria(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    id_alumno = db.Column(db.Integer, db.ForeignKey('alumno.id'), nullable=False)
-    id_tutor = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
-    fecha = db.Column(db.DateTime, nullable=False)
-    tema = db.Column(db.String(150), nullable=False)
-    estado = db.Column(db.String(30), default="Solicitada")
-    observaciones = db.Column(db.Text, default="")
-    carrera = db.Column(db.String(100), default="")
-    grupo = db.Column(db.String(20), default="")
-    hr_inicio = db.Column(db.String(10), default="")
-    hr_salida = db.Column(db.String(10), default="")
-    motivo = db.Column(db.Text, default="")
-    puntos_relevantes = db.Column(db.Text, default="")
-    compromisos = db.Column(db.Text, default="")
-    alumno = db.relationship('Alumno', backref='lista_tutorias')
-
-class ConfiguracionRespaldos(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    activo = db.Column(db.Boolean, default=False)
-    intervalo_horas = db.Column(db.Integer, default=24)
-    ultima_ejecucion = db.Column(db.DateTime)
-
-class Auditoria(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    accion = db.Column(db.String(100), nullable=False)
-    fecha = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    ip = db.Column(db.String(50), nullable=False)
-    usuario = db.Column(db.String(100))
-
-# ===================== DATOS INICIALES =====================
-TUTORES_INICIALES = [
-    ("juan.tovar", "Juan Manuel Tovar Sánchez"),
-    ("silvia.castrejon", "Silvia Sofia Castrejon Zarate")
-]
-
-ALUMNOS_INICIALES = [
-    ("TIC-310113", "Andrade Carlos Ricardo", "silvia.castrejon"),
-    ("TIC-310095", "Beltrán Peña Samantha Milliani", "silvia.castrejon"),
-    ("TIC-310099", "Fernández López Angela Ailin", "silvia.castrejon"),
-    ("TIC-310134", "López Cabrera Luis Daniel", "silvia.castrejon"),
-    ("TIC-310010", "Regino Ines Alan Andrés", "silvia.castrejon"),
-    ("TIC-310060", "Ávalos Zendejas José Ramón", "silvia.castrejon"),
-    ("TIC-310147", "Covarrubias García Dayron Antonio", "silvia.castrejon"),
-    ("TIC-300012", "González Ruelas Fernanda", "silvia.castrejon"),
-    ("TIC-310184", "Mora Yañez Jonathan Alexis", "silvia.castrejon"),
-    ("TIC-310086", "Sánchez González Karen Alexa", "silvia.castrejon"),
-    ("TIC-310009", "Zamora Partida Enrique Gael", "silvia.castrejon"),
-    ("TIC-310159", "Cano Amparo Paul Mauricio", "silvia.castrejon"),
-    ("TIC-310155", "García Medina Edwin Julian", "silvia.castrejon"),
-    ("TIC-310185", "Martínez Elías Kevin Arturo", "silvia.castrejon"),
-    ("TIC-310123", "Pérez Arias Adrián de Jesús", "silvia.castrejon"),
-    ("TIC-310071", "Sandoval Guardado Miguel Ángel", "silvia.castrejon"),
-    ("TIC-310046", "Segura Hernández Edgar Gabriel", "silvia.castrejon"),
-    ("TIC-310042", "Ramírez Serna Gabriel Alejandro", "silvia.castrejon"),
-    ("TIC-310150", "Robles Ramírez Jorge Alexander", "silvia.castrejon"),
-    ("TIC-310001", "Rubio Romero Katherine Jais", "silvia.castrejon"),
-    ("TI-310142", "Vázquez Cortez Jorge Alejandro", "silvia.castrejon"),
-    ("TIC-310173", "Aguilar Núñez José Manuel", "silvia.castrejon"),
-    ("TIC-310012", "Aranda Martínez Eimy Eileen", "silvia.castrejon"),
-    ("TIC-310049", "Esparza Burgara Jesús Gabriel", "silvia.castrejon"),
-    ("TIC-310089", "Gasga García Joana Michelle", "silvia.castrejon"),
-    ("TIC-310148", "López Castillo Carlos Eduardo", "silvia.castrejon"),
-    ("TIC-310029", "De la Paz Venegas Brandon Josué", "silvia.castrejon"),
-    ("TIC-310035", "Aguilar Osuna Xandier Daniel", "silvia.castrejon"),
-    ("TIC-310054", "Cañedo Segura Nephtis Adonahi", "silvia.castrejon"),
-    ("TIC-310131", "Flores Luna Diego Sebastián", "silvia.castrejon"),
-    ("TIC-310091", "González Torres Karol Emmanuel", "silvia.castrejon"),
-    ("TIC-300099", "Ozuna Aguilar Karla Yadira", "silvia.castrejon"),
-    ("TIC-310068", "Pérez Ruiz Julio Javier", "silvia.castrejon"),
-    ("TIC-310153", "Ávila Ríos Rafael Humberto", "silvia.castrejon"),
-    ("TIC-310182", "Reyna Villanueva David Arturo", "silvia.castrejon"),
-    ("TIC-310040", "Gómez Nava Luis Ricardo", "silvia.castrejon"),
-    ("TIC-310088", "Zepeda Aguilar Jazmín Lizeth", "silvia.castrejon"),
-    ("TIC-310167", "Ornelas González Jesús Antonio", "silvia.castrejon"),
-    ("TIC-310192", "Rodríguez de la Cruz Jesús Emmanuel", "silvia.castrejon"),
-    ("TIC-310195", "Morales Bañuelos Alex Gilberto", "silvia.castrejon"),
-    ("TIC-310059", "Ramos Díaz Aldair Alejandro", "silvia.castrejon"),
-    ("TIC-310196", "Ruíz Encarnación Maximiliano", "silvia.castrejon"),
-    ("TIC-310137", "Topete Fregoso José Armando", "silvia.castrejon"),
-    ("TIC-310156", "Velasco Sánchez Raúl Mauricio", "silvia.castrejon"),
-    ("TIC-310011", "Medina Delgado Alan Emir", "silvia.castrejon"),
-    ("TIC-310072", "Araujo Robledo Alain Javier", "juan.tovar"),
-    ("TIC-310048", "Cisneros Macías Alondra Guadalupe", "juan.tovar"),
-    ("TIC-310143", "Flores Ochoa Kervin Geovanni", "juan.tovar"),
-    ("TIC-310104", "Mendoza Salas Gilberto Alonso", "juan.tovar"),
-    ("TIC-310116", "Ramos Rivera Yoel Guadalupe", "juan.tovar"),
-    ("TIC-310166", "Bañuelos Vizcarra Román Alexis", "juan.tovar"),
-    ("TIC-310097", "Estrada Parra Emiliano", "juan.tovar"),
-    ("TIC-310190", "Montes Montes Pedro Vladimir", "juan.tovar"),
-    ("TIC-310160", "Palomar Macías Kevin Abraham", "juan.tovar"),
-    ("TIC-310037", "Velázquez Meza Axel", "juan.tovar"),
-    ("TIC-300002", "Bernal Arias Diana Laura", "juan.tovar"),
-    ("TIC-310085", "Díaz Hernández Cesar Andrés", "juan.tovar"),
-    ("TIC-310025", "Moreno Avalos Anel Elizabeth", "juan.tovar"),
-    ("TIC-310067", "Rivas Sierra José Manuel", "juan.tovar"),
-    ("TIC-310047", "López Raygoza Christopher Wilfrido", "juan.tovar"),
-    ("TIC-310114", "Plascencia Domínguez Christopher Martin", "juan.tovar"),
-    ("TIC-260053", "Rodríguez Millán Gerardo Alberto", "juan.tovar"),
-    ("TIC-310168", "Rosales García Sherlyn Vanessa", "juan.tovar"),
-    ("TIC-310094", "Ruiz Mendoza Gilberto", "juan.tovar"),
-    ("TIC-310102", "Topete Sánchez José Carlos", "juan.tovar"),
-    ("TIC-310120", "Alvarado Rodríguez Alexis Ariel", "juan.tovar"),
-    ("TIC-310020", "Barajas Rosales Erick Geovanny", "juan.tovar"),
-    ("TIC-310128", "García Correa Bertha Odalys", "juan.tovar"),
-    ("TIC-310163", "Guerrero Ponce Roque Joseph", "juan.tovar"),
-    ("TIC-310016", "Raygosa Curiel Julissa Anahy", "juan.tovar"),
-    ("TIC-310187", "Torres Rodríguez Emmanuel", "juan.tovar"),
-    ("TIC-310103", "Arce Rosales Fernanda Dalet", "juan.tovar"),
-    ("TIC-300089", "Cocco Malagón Christpher", "juan.tovar"),
-    ("TIC-312001", "García Macías Jahir", "juan.tovar"),
-    ("TIC-310151", "Gutiérrez Ruelas Nelly Jarei", "juan.tovar"),
-    ("TIC-310055", "Ramírez Abrego Danna Giselle", "juan.tovar"),
-    ("TIC-310087", "Segundo Lara Jeshua Miguel", "juan.tovar"),
-    ("TIC-310188", "Bernal Hernández Brandon Eduardo", "juan.tovar"),
-    ("TIC-310022", "Corona Pérez Alain Antonio", "juan.tovar"),
-    ("TIC-310003", "Gonzalez Lares Alexandra Rubí", "juan.tovar"),
-    ("TIC-310036", "Gutiérrez Zepeda Yorel Isaí", "juan.tovar"),
-    ("TIC-310073", "Rivera Orozco Vanessa de Jesús", "juan.tovar"),
-    ("TIC-310007", "Samaniego de León Andy Alexander", "juan.tovar"),
-    ("TIC-310027", "Díaz Herrera Víctor Manuel", "juan.tovar"),
-    ("TIC-31019", "Larios García Cristopher", "juan.tovar"),
-    ("TIC-300133", "Marrujo Arellano Crystopher", "juan.tovar"),
-    ("TIC-300170", "Navarro López Antonio Damián", "juan.tovar"),
-    ("TIC-310121", "Peña Arvizu Jorge Gabriel", "juan.tovar"),
-    ("TIC-310178", "Wu Barocio Alfonso Alejandro", "juan.tovar"),
-]
-
-def inicializar_base_datos():
-    with app.app_context():
-        db.create_all()
-        if not ConfiguracionRespaldos.query.first(): 
-            db.session.add(ConfiguracionRespaldos())
-            
-        usr_coord = Usuario.query.filter_by(credencial="coordinador").first()
-        if not usr_coord:
-            admin = Usuario(tipo="coordinador", credencial="coordinador", nombre_completo="Coordinador General", contrasena=generate_password_hash("clave_coordinador"))
-            db.session.add(admin)
-        else:
-            usr_coord.contrasena = generate_password_hash("clave_coordinador")
-            usr_coord.bloqueado = False
-
-        mapa_tutores = {}
-
-        for cred, nombre in TUTORES_INICIALES:
-            usr = Usuario.query.filter_by(credencial=cred).first()
-            if not usr:
-                usr = Usuario(
-                    tipo="tutor", 
-                    credencial=cred, 
-                    nombre_completo=nombre, 
-                    contrasena=generate_password_hash(cred)
-                )
-                db.session.add(usr)
-                db.session.flush()
-                db.session.add(Tutor(usuario_id=usr.id))
-            else:
-                usr.contrasena = generate_password_hash(cred)
-                usr.bloqueado = False
-                usr.intentos_fallidos = 0
-            mapa_tutores[cred] = usr.id
-                
-        for cred, nombre, cred_tutor in ALUMNOS_INICIALES:
-            usr = Usuario.query.filter_by(credencial=cred).first()
-            id_tutor_asignado = mapa_tutores.get(cred_tutor)
-
-            if not usr:
-                usr = Usuario(
-                    tipo="alumno", 
-                    credencial=cred, 
-                    nombre_completo=nombre, 
-                    contrasena=generate_password_hash(cred)
-                )
-                db.session.add(usr)
-                db.session.flush()
-                db.session.add(Alumno(usuario_id=usr.id, id_tutor=id_tutor_asignado, rendimiento="Sin registro"))
-            else:
-                usr.contrasena = generate_password_hash(cred)
-                usr.bloqueado = False
-                usr.intentos_fallidos = 0
-                if usr.perfil_alumno:
-                    usr.perfil_alumno.id_tutor = id_tutor_asignado
-
-        db.session.commit()
-
-inicializar_base_datos()
-
-# ===================== RESPALDOS =====================
-CARPETA_RESPALDOS = os.path.join(CARPETA_BASE, "respaldos")
-os.makedirs(CARPETA_RESPALDOS, exist_ok=True)
-
-def tarea_respaldo_automatico():
-    while True:
-        with app.app_context():
-            try:
-                cfg = ConfiguracionRespaldos.query.first()
-                if cfg and cfg.activo:
-                    ahora = datetime.now(timezone.utc)
-                    if not cfg.ultima_ejecucion or (ahora - cfg.ultima_ejecucion.replace(tzinfo=timezone.utc)).total_seconds() >= cfg.intervalo_horas * 3600:
-                        nombre = f"respaldo_{ahora.strftime('%Y%m%d_%H%M%S')}.db"
-                        destino = os.path.join(CARPETA_RESPALDOS, nombre)
-                        if os.path.exists(RUTA_DB):
-                            shutil.copy2(RUTA_DB, destino)
-                            cfg.ultima_ejecucion = ahora
-                            db.session.commit()
-            except Exception as e:
-                print(f"Error en tarea de respaldo: {e}")
-        time.sleep(3600)
-
-threading.Thread(target=tarea_respaldo_automatico, daemon=True).start()
-
-# ===================== FUNCIONES AUXILIARES =====================
-def generar_pdf(datos, titulo, columnas):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, titulo.encode('latin-1', 'replace').decode('latin-1'), ln=True, align="C")
-    pdf.ln(5)
-    pdf.set_font("Arial", "B", 10)
-    anchos = [40, 50, 40, 50]
-    for i, col in enumerate(columnas):
-        pdf.cell(anchos[i], 8, col.encode('latin-1', 'replace').decode('latin-1'), border=1, align="C")
-    pdf.ln()
-    pdf.set_font("Arial", "", 9)
-    for fila in datos:
-        for i, celda in enumerate(fila):
-            texto = str(celda).encode('latin-1', 'replace').decode('latin-1')
-            pdf.cell(anchos[i], 8, texto, border=1, align="C")
-        pdf.ln()
-    ruta = os.path.join(CARPETA_BASE, f"reporte_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf")
-    pdf.output(ruta)
-    return ruta
-
-# ===================== JWT COMPLEMENTARIO =====================
-JWT_ALGORITMO = "HS256"
-JWT_MINUTOS_EXPIRACION = 30
-
-def generar_token(usuario):
-    payload = {
-        "uid": usuario.id,
-        "rol": usuario.tipo,
-        "nombre": usuario.nombre_completo,
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=JWT_MINUTOS_EXPIRACION)
-    }
-    return jwt.encode(payload, app.config["SECRET_KEY"], algorithm=JWT_ALGORITMO)
-
-def obtener_token_peticion():
-    token = request.cookies.get("token")
-    if token: 
-        return token
-    encabezado = request.headers.get("Authorization", "")
-    if encabezado.startswith("Bearer "): 
-        return encabezado.split(" ", 1)[1]
-    return None
-
-def requiere_rol(*roles_permitidos):
-    def decorador(vista):
-        @wraps(vista)
-        def envoltura(*args, **kwargs):
-            if "uid" in session and (not roles_permitidos or session.get("rol") in roles_permitidos):
-                g.uid, g.rol, g.nombre = session["uid"], session["rol"], session.get("nombre")
-                return vista(*args, **kwargs)
-            token = obtener_token_peticion()
-            if not token: 
-                return redirect(url_for("login"))
-            try:
-                payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=[JWT_ALGORITMO])
-            except jwt.ExpiredSignatureError:
-                flash("Tu sesión ha expirado", "error")
-                return redirect(url_for("login"))
-            except jwt.InvalidTokenError:
-                flash("Sesión inválida", "error")
-                return redirect(url_for("login"))
-            if roles_permitidos and payload["rol"] not in roles_permitidos:
-                return redirect(url_for("login"))
-            g.uid, g.rol, g.nombre = payload["uid"], payload["rol"], payload["nombre"]
-            return vista(*args, **kwargs)
-        return envoltura
-    return decorador
-
-# ===================== LOGIN =====================
-@app.route("/", methods=["GET", "POST"])
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    ip = request.remote_addr
-    if request.method == "POST":
-        cred = request.form["credencial"].strip()
-        passw = request.form["contrasena"].strip()
-        usuario = Usuario.query.filter_by(credencial=cred).first()
-        if not usuario or not check_password_hash(usuario.contrasena, passw):
-            flash("Credenciales incorrectas", "error")
-            return redirect(url_for("login"))
-        if usuario.bloqueado:
-            flash("Usuario bloqueado", "error")
-            return redirect(url_for("login"))
-        usuario.intentos_fallidos = 0
-        db.session.add(Auditoria(accion=f"INGRESO: {usuario.tipo}", ip=ip, usuario=usuario.nombre_completo))
-        db.session.commit()
-        session["uid"], session["rol"], session["nombre"] = usuario.id, usuario.tipo, usuario.nombre_completo
-        token = generar_token(usuario)
-        respuesta = redirect(url_for(f"panel_{usuario.tipo}"))
-        respuesta.set_cookie("token", token, httponly=True, samesite="Lax", secure=request.is_secure, max_age=JWT_MINUTOS_EXPIRACION * 60)
-        flash(f"Bienvenido {usuario.nombre_completo}", "success")
-        return respuesta
-    return render_template("login.html")
-
-@app.route("/salir")
-def salir():
-    session.clear()
-    respuesta = redirect("/")
-    respuesta.delete_cookie("token")
-    return respuesta
-
-# ===================== ALUMNO =====================
-@app.route("/panel-alumno")
-@requiere_rol("alumno")
-def panel_alumno():
-    alumno = Alumno.query.filter_by(usuario_id=g.uid).first()
-    tutorias = Tutoria.query.filter_by(id_alumno=alumno.id).order_by(Tutoria.fecha.desc()).all() if alumno else []
-    return render_template("alumno.html", alumno=alumno, tutorias=tutorias)
-
-@app.route("/solicitar-tutoria", methods=["POST"])
-@requiere_rol("alumno")
-def solicitar_tutoria():
-    alumno = Alumno.query.filter_by(usuario_id=g.uid).first()
-    try:
-        fecha = datetime.strptime(request.form["fecha"], "%Y-%m-%d")
-    except (ValueError, KeyError):
-        flash("La fecha proporcionada no es válida", "error")
-        return redirect(url_for("panel_alumno"))
-
-    tema = request.form.get("tema", "").strip()
-    if not tema:
-        flash("El tema no puede estar vacío", "error")
-        return redirect(url_for("panel_alumno"))
-
-    nueva = Tutoria(id_alumno=alumno.id, id_tutor=alumno.id_tutor, fecha=fecha, tema=tema, estado="Solicitada")
-    db.session.add(nueva)
-    db.session.commit()
-    flash("Solicitud enviada al tutor correctamente", "success")
-    return redirect(url_for("panel_alumno"))
-
-@app.route("/reportes-alumno")
-@requiere_rol("alumno")
-def reportes_alumno():
-    alumno = Alumno.query.filter_by(usuario_id=g.uid).first()
-    mis_tutorias = Tutoria.query.filter_by(id_alumno=alumno.id).all() if alumno else []
-    total = len(mis_tutorias)
-    realizadas = sum(1 for t in mis_tutorias if t.estado == "Realizada")
-    pendientes = sum(1 for t in mis_tutorias if t.estado in ["Solicitada", "Confirmada", "Asignada por tutor"])
-    return render_template("reportes_alumno.html", total=total, realizadas=realizadas, pendientes=pendientes, tutorias=mis_tutorias)
-
-# ===================== TUTOR =====================
-@app.route("/panel-tutor")
-@requiere_rol("tutor")
-def panel_tutor():
-    tutor = Tutor.query.filter_by(usuario_id=g.uid).first()
     tutorias = Tutoria.query.filter_by(id_tutor=g.uid).order_by(Tutoria.fecha.desc()).all()
     alumnos = Alumno.query.filter_by(id_tutor=g.uid).all()
     return render_template("tutor.html", tutor=tutor, alumnos=alumnos, tutorias=tutorias)
@@ -939,61 +572,77 @@ def ver_tutoria_individual(id):
 @app.route("/descargar-ficha-tutoria-pdf/<int:id>")
 @requiere_rol("tutor", "alumno")
 def descargar_ficha_tutoria_pdf(id):
-    tutoria = Tutoria.query.get_or_404(id)
-    if g.rol == "tutor" and tutoria.id_tutor != g.uid:
-        flash("No tienes permiso", "error")
-        return redirect(url_for("panel_tutor"))
+    try:
+        tutoria = Tutoria.query.get_or_404(id)
+        
+        # Validación de permisos
+        if g.rol == "tutor" and tutoria.id_tutor != g.uid:
+            flash("No tienes permiso para ver esta tutoría", "error")
+            return redirect(url_for("panel_tutor"))
 
-    # Cargar y rellenar la plantilla Excel con los datos exactos de la tutoría
-    if os.path.exists(PLANTILLA_EXCEL):
-        wb = openpyxl.load_workbook(PLANTILLA_EXCEL)
-        ws = wb.active
-
-        nombre_alumno = tutoria.alumno.usuario.nombre_completo if tutoria.alumno and tutoria.alumno.usuario else ""
-        matricula_alumno = tutoria.alumno.usuario.credencial if tutoria.alumno and tutoria.alumno.usuario else ""
+        # Obtener datos de manera segura contra nulos
+        nombre_alumno = tutoria.alumno.usuario.nombre_completo if (tutoria.alumno and tutoria.alumno.usuario) else "Sin Alumno"
+        matricula_alumno = tutoria.alumno.usuario.credencial if (tutoria.alumno and tutoria.alumno.usuario) else "N/A"
         tutor_obj = Usuario.query.get(tutoria.id_tutor)
-        nombre_tutor = tutor_obj.nombre_completo if tutor_obj else ""
-        fecha_str = tutoria.fecha.strftime("%d/%m/%Y") if tutoria.fecha else ""
+        nombre_tutor = tutor_obj.nombre_completo if tutor_obj else "Sin Tutor"
+        fecha_str = tutoria.fecha.strftime("%d/%m/%Y") if tutoria.fecha else "Sin Fecha"
 
-        # Mapeo de celdas según la estructura de la ficha oficial UTN
-        ws['C8'] = nombre_alumno
-        ws['C9'] = matricula_alumno
-        ws['C10'] = tutoria.carrera or "Tecnologías de la Información"
-        ws['G8'] = tutoria.grupo or "91"
-        ws['G9'] = fecha_str
-        ws['G10'] = f"{tutoria.hr_inicio} - {tutoria.hr_salida}" if tutoria.hr_inicio else ""
-        ws['C12'] = nombre_tutor
-        ws['C14'] = tutoria.motivo or tutoria.tema
-        ws['B17'] = tutoria.puntos_relevantes or ""
-        ws['B22'] = tutoria.compromisos or ""
-        ws['B27'] = tutoria.observaciones or ""
+        # Uso del directorio temporal del sistema (/tmp) para evitar PermissionError en producción
+        carpeta_temp = tempfile.gettempdir()
 
-        # Guardar en archivo temporal
-        nombre_salida_excel = os.path.join(CARPETA_BASE, f"Ficha_Tutoria_{tutoria.id}.xlsx")
-        wb.save(nombre_salida_excel)
+        # Rellenar plantilla Excel si existe
+        if os.path.exists(PLANTILLA_EXCEL):
+            wb = openpyxl.load_workbook(PLANTILLA_EXCEL)
+            ws = wb.active
 
-        # Generar versión PDF enriquecida basada en el formato
+            ws['C8'] = nombre_alumno
+            ws['C9'] = matricula_alumno
+            ws['C10'] = tutoria.carrera or "Tecnologías de la Información"
+            ws['G8'] = tutoria.grupo or "91"
+            ws['G9'] = fecha_str
+            ws['G10'] = f"{tutoria.hr_inicio} - {tutoria.hr_salida}" if tutoria.hr_inicio else ""
+            ws['C12'] = nombre_tutor
+            ws['C14'] = tutoria.motivo or tutoria.tema
+            ws['B17'] = tutoria.puntos_relevantes or ""
+            ws['B22'] = tutoria.compromisos or ""
+            ws['B27'] = tutoria.observaciones or ""
+
+            nombre_salida_excel = os.path.join(carpeta_temp, f"Ficha_Tutoria_{tutoria.id}.xlsx")
+            wb.save(nombre_salida_excel)
+
+        # Generar PDF en el directorio temporal
         datos_pdf = [
             ["Alumno:", nombre_alumno, "Matrícula:", matricula_alumno],
-            ["Carrera:", tutoria.carrera or "TIC", "Grupo / Fecha:", f"{tutoria.grupo} / {fecha_str}"],
-            ["Tutor:", nombre_tutor, "Horario:", f"{tutoria.hr_inicio} - {tutoria.hr_salida}"],
-            ["Motivo:", tutoria.motivo or tutoria.tema, "Estado:", tutoria.estado],
+            ["Carrera:", tutoria.carrera or "TIC", "Grupo / Fecha:", f"{tutoria.grupo or ''} / {fecha_str}"],
+            ["Tutor:", nombre_tutor, "Horario:", f"{tutoria.hr_inicio or ''} - {tutoria.hr_salida or ''}"],
+            ["Motivo:", tutoria.motivo or tutoria.tema or "N/A", "Estado:", tutoria.estado or "N/A"],
             ["Puntos Relevantes:", tutoria.puntos_relevantes or "N/A", "", ""],
             ["Compromisos:", tutoria.compromisos or "N/A", "", ""]
         ]
-        ruta_pdf = generar_pdf(datos_pdf, f"FICHA DE TUTORÍA INDIVIDUAL #{tutoria.id}", ["Campo", "Valor", "Detalle", "Información"])
         
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", "B", 14)
+        pdf.cell(0, 10, f"FICHA DE TUTORIA INDIVIDUAL #{tutoria.id}".encode('latin-1', 'replace').decode('latin-1'), ln=1, align="C")
+        pdf.ln(5)
+        
+        pdf.set_font("Arial", "", 9)
+        anchos = [40, 50, 40, 50]
+        for fila in datos_pdf:
+            for i, celda in enumerate(fila):
+                texto = str(celda).encode('latin-1', 'replace').decode('latin-1')
+                pdf.cell(anchos[i], 8, texto, border=1, align="L")
+            pdf.ln()
+
+        ruta_pdf = os.path.join(carpeta_temp, f"Ficha_Tutoria_{tutoria.id}.pdf")
+        pdf.output(ruta_pdf)
+
         return send_file(ruta_pdf, as_attachment=True, download_name=f"Ficha_Tutoria_{tutoria.id}.pdf")
-    else:
-        # Si no existe la plantilla excel, genera el PDF plano por defecto
-        datos = [
-            ["Alumno", tutoria.alumno.usuario.nombre_completo if tutoria.alumno and tutoria.alumno.usuario else "N/A"],
-            ["Fecha", tutoria.fecha.strftime("%d/%m/%Y") if tutoria.fecha else "N/A"],
-            ["Tema", tutoria.tema],
-            ["Estado", tutoria.estado]
-        ]
-        ruta = generar_pdf(datos, f"Ficha de Tutoría #{tutoria.id}", ["Campo", "Detalle"])
-        return send_file(ruta, as_attachment=True, download_name=f"ficha_tutoria_{tutoria.id}.pdf")
+
+    except Exception as e:
+        print(f"Error generando la ficha PDF: {e}")
+        flash("Ocurrió un error al generar la ficha en PDF. Verifique los logs del servidor.", "error")
+        return redirect(url_for("panel_tutor" if g.rol == "tutor" else "panel_alumno"))
 
 # ===================== COORDINADOR =====================
 @app.route("/panel-coordinador")
